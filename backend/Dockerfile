@@ -14,13 +14,19 @@ COPY backend/go.mod backend/go.sum* ./
 RUN go mod tidy
 
 COPY backend/ ./
-RUN go build -o server ./cmd/KitaF_Q-Tracker/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/KitaF_Q-Tracker/main.go
 
 FROM alpine:latest
 WORKDIR /app
 
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 COPY --from=frontend-builder /app/frontend/out ./public
 COPY --from=backend-builder /app/backend/server ./server
+
+RUN chown -R appuser:appgroup /app
+
+USER appuser
 
 EXPOSE 8080
 CMD ["./server"]
