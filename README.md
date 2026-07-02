@@ -8,7 +8,7 @@
 - Golang (バックエンド)
 - Next.js (フロントエンド)
 - Daisy UI (CSSフレームワーク)
-- Redis (インメモリデータベース)
+- Sqlite (データベース)
 
 # ライセンス
 本システムのソースコードはMIT LICENSEにて提供します。
