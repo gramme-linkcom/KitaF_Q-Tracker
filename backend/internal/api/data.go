@@ -3,7 +3,9 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"kfqt_backend/internal/model"
 	"kfqt_backend/internal/repository"
+	"kfqt_backend/internal/system"
 	"net/http"
 )
 
@@ -11,33 +13,19 @@ type APIEnv struct {
 	DB *sql.DB
 }
 
-// 💡 1グループあたりのプレイ時間設定（5分）
-const PlayTimePerGroup = 5
-
-type UserQueueResponse struct {
-	WaitTime      int		`json:"waitTime"`
-	WaitingGroups int		`json:"waitingGroups"`
-	CurrentNumber int		`json:"currentNumber"`
-	IsActive      bool		`json:"isActive"`
-	NoticeMessage string	`json:"noticeMessage"` // 自動計算の混雑目安
-	InfoMessage   string	`json:"infoMessage"`   // configから読み込んだ運営の手動メッセージ
-}
-
-// 💻 2. 管理者コンソール（WebSocket）用のフルデータレスポンス
-type AdminQueueResponse struct {
-	WaitTime      int					`json:"waitTime"`
-	WaitingGroups int					`json:"waitingGroups"`
-	CurrentNumber int					`json:"currentNumber"`
-	IsActive      bool					`json:"isActive"`
-	NoticeMessage string				`json:"noticeMessage"`
-	InfoMessage   string 				`json:"infoMessage"`
-	Tickets       []repository.Ticket	`json:"tickets"`
-}
-
 func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
+	config := system.ReadConfig()
+
 	w.Header().Set("Content-Type", "application/json")
 
-	// 1. リポジトリから純粋なDBデータを個別に取得
+	myNumberStr := r.URL.Query().Get("myNumber")
+
+	myAheadGroups := 0
+	if myNumberStr != "" && myNumberStr != "0" {
+		myAheadGroups = repository.GetAheadGroups(env.DB, myNumberStr)
+	}
+
+	// リポジトリから純粋なDBデータを個別に取得
 	room, err := repository.GetRoomStatus(env.DB)
 	if err != nil {
 		http.Error(w, `{"error": "ルーム状況の取得に失敗しました"}`, http.StatusInternalServerError)
@@ -50,28 +38,41 @@ func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. 取得したデータをもとに、API側でロジック計算を行う
+	// 取得したデータをもとに、API側でロジック計算を行う
 	waitingGroups := len(tickets)
+	currentNumber := 0
+	nextNumber	  := 0
+	if len(tickets) > 0 {
+		currentNumber = tickets[0].Number
+	}
+	if len(tickets) > 1 {
+		nextNumber = tickets[1].Number
+	}
+	
 
 	waitTime := 0
 	if room.IsActive {
-		waitTime = (waitingGroups + 1) * PlayTimePerGroup
+		waitTime = (waitingGroups + 1) * config.TimeRequired
 	} else {
-		waitTime = waitingGroups * PlayTimePerGroup
+		waitTime = waitingGroups * config.TimeRequired
 	}
 
-	noticeMessage := "現在、すぐにご案内できます。"
+	noticeMessage := config.MessageAvailable
 	if waitTime >= 15 {
-		noticeMessage = "現在、ご案内までに大幅にお時間がかかります。"
+		noticeMessage = config.MessageHeavyDelay
 	} else if waitTime > 0 {
-		noticeMessage = "現在、ご案内までに多少お時間がかかります。"
+		noticeMessage = config.MessageNormalDelay
 	}
 
 	// 3. レスポンスデータを組み立てて送出
-	response := UserQueueResponse{
+	response := model.UserQueueResponse{
 		WaitTime:      waitTime,
+		TimeRequired : config.TimeRequired,
 		WaitingGroups: waitingGroups,
-		CurrentNumber: room.CurrentNumber,
+		MyAheadGroups: myAheadGroups,
+		CurrentNumber:	currentNumber,
+		NextNumber: 	nextNumber,
+		IsBookingAvailable: config.IsBookingAvailable,
 		IsActive:      room.IsActive,
 		NoticeMessage: noticeMessage,
 		InfoMessage:   "",

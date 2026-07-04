@@ -29,7 +29,7 @@ export default function BookingModal({ isOpen, onClose, onConfirm }: BookingModa
             <li className="flex items-start gap-2.5">
               <i className="bi bi-clock-history text-cyan-400 text-sm mt-0.5 shrink-0"></i>
               <span>
-                お呼び出し通知は、<strong className="text-zinc-100 font-semibold">直前のグループの入場時のご案内</strong>となります。通知が届きましたら、お早めに部屋の前までお越しください。
+                お呼び出し通知は、<strong className="text-zinc-100 font-semibold">直前のグループ入場時のご案内</strong>となります。通知が届きましたら、お早めに部屋の前までお越しください。
               </span>
             </li>
             <li className="flex items-start gap-2.5">

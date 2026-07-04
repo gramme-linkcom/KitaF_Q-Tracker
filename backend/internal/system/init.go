@@ -14,10 +14,10 @@ type Config struct {
 	PageTitle			string	`json:"page_title"`				// ヘッダー名前
 	RoomName			string 	`json:"room_name"`
 	
-	WaitTime			int		`json:"wait_time"`				// 秒単位指定
+	TimeRequired		int		`json:"time_required"`			// 分単位指定
 	// 時間設定の人為的ミス防止
-	WaitTimeRangeMin	int 	`json:"wait_time_range_min"`	// 秒単位指定
-	WaitTimeRangeMax	int 	`json:"wait_time_range_max"`	// 秒単位指定
+	TimeRequiredRangeMin int 	`json:"time_required_range_min"`	// 分単位指定
+	TimeRequiredRangeMax int 	`json:"time_required_range_max"`	// 分単位指定
 
 	ServeStartTime		string	`json:"serve_start_time"`		// HH:MM 形式
 	ServeEndTime		string	`json:"serve_end_time"`			// HH:MM 形式
@@ -30,9 +30,6 @@ type Config struct {
     MessageHeavyDelay   string `json:"message_heavy_delay"`		// 大幅に時間がかかるとき
 
 	IsEventAvailable	bool 	`json:"is_event_available"`		// システムが利用できるかどうか
-
-	// Push通知
-	PushNotification	bool	`json:"push_notification"`		// プッシュ通知を利用するかどうか
 
 	//利用者がキューを入れられるかどうか
 	IsBookingAvailable	bool	`json:"is_booking_available"`	// 予約を入れられるかどうか
@@ -59,9 +56,9 @@ func createConfig() {
 	defaultConfig := &Config{
 		PageTitle:				"Q-Tracker",
 		RoomName: 				"Room",
-		WaitTime: 				3000,
-		WaitTimeRangeMin: 		60,
-		WaitTimeRangeMax: 		6000,
+		TimeRequired: 				5,
+		TimeRequiredRangeMin: 		1,
+		TimeRequiredRangeMax: 		10,
 		ServeStartTime: 		"17:00",
 		ServeEndTime: 			"09:00",
 		Infomation:				"",
@@ -70,7 +67,6 @@ func createConfig() {
 		MessageNormalDelay:		"現在、ご案内までに多少お時間がかかります。",
 		MessageHeavyDelay:		"現在、ご案内までに大幅にお時間がかかります。",
 		IsEventAvailable:		false,
-		PushNotification:		true,
 		IsBookingAvailable:		false,
 		AdminConsoleAddress:	uuidStr,
 	}

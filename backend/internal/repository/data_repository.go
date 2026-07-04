@@ -5,9 +5,9 @@ import (
 )
 
 type Ticket struct {
-	Number int    `json:"number"`
-	Name   string `json:"name"`
-	Status string `json:"status"` // "waiting", "called", "canceled", "absent"
+	Number 		int    `json:"number"`
+	DeviceID	string `json:"device_id"`
+	Status 		string `json:"status"` // "waiting", "called", "canceled", "absent"
 }
 
 // RoomStatus は現在の部屋全体の状況を表す構造体
@@ -22,9 +22,20 @@ func GetRoomStatus(db *sql.DB) (RoomStatus, error) {
 	return room, err
 }
 
+func GetAheadGroups(db *sql.DB, myNumberStr string) (int) {
+	myAheadGroups := 0
+	query := "SELECT COUNT(*) FROM tickets WHERE number < ? AND status = 'waiting'"
+	err := db.QueryRow(query, myNumberStr).Scan(&myAheadGroups)
+	if err != nil {
+		// エラー時は安全に0にしておく
+		return 0
+	}
+	return myAheadGroups 
+}
+
 // GetActiveTickets は待機中("waiting")のチケットの一覧を番号順にそのまま取得する
 func GetActiveTickets(db *sql.DB) ([]Ticket, error) {
-	rows, err := db.Query("SELECT number, name, status FROM tickets WHERE status = 'waiting' ORDER BY number ASC")
+	rows, err := db.Query("SELECT number, device_id, status FROM tickets WHERE status = 'waiting' ORDER BY number ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +44,7 @@ func GetActiveTickets(db *sql.DB) ([]Ticket, error) {
 	var tickets []Ticket
 	for rows.Next() {
 		var t Ticket
-		if err := rows.Scan(&t.Number, &t.Name, &t.Status); err != nil {
+		if err := rows.Scan(&t.Number, &t.DeviceID, &t.Status); err != nil {
 			return nil, err
 		}
 		tickets = append(tickets, t)
@@ -44,7 +55,3 @@ func GetActiveTickets(db *sql.DB) ([]Ticket, error) {
 	}
 	return tickets, nil
 }
-
-// func GetWaitStatusByDB(database *sql.DB) {
-	
-// }

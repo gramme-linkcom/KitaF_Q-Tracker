@@ -32,7 +32,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", middleware.SameSiteOnlyMiddleware(internal.GetIndexHandlerfunc))
 	mux.HandleFunc("GET /api/data", middleware.SameSiteOnlyMiddleware(env.GetStatusHandler))
-	// mux.HandleFunc("GET /api/")
+	mux.HandleFunc("POST /api/booking", middleware.SameSiteOnlyMiddleware(env.BookTicketHandler))
+	mux.HandleFunc("POST /api/booking/cancel", middleware.SameSiteOnlyMiddleware(env.CancelBookingHandler))
 
 	loggedMux := middleware.LoggerMiddleware(mux)
 

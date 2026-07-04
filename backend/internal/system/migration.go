@@ -10,7 +10,7 @@ func migrate(db *sql.DB) error {
 	ticketsTable := `
 	CREATE TABLE IF NOT EXISTS tickets (
 		number INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT,
+		device_id TEXT,
 		status TEXT NOT NULL DEFAULT 'waiting',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
@@ -21,7 +21,7 @@ func migrate(db *sql.DB) error {
 	// 2. ルーム状況管理テーブルの作成
 	roomStatusTable := `
 	CREATE TABLE IF NOT EXISTS room_status (
-		id INTEGER PRIMARY KEY CHECK (id = 1), -- 常に1行しか存在させない制約
+		id INTEGER PRIMARY KEY CHECK (id = 1),
 		current_number INTEGER DEFAULT 0,
 		is_active INTEGER DEFAULT 0 -- 0: false, 1: true
 	);`
