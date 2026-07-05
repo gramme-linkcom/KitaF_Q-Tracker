@@ -3,6 +3,7 @@ package main
 import (
 	"kfqt_backend/internal"
 	"kfqt_backend/internal/api"
+	"kfqt_backend/internal/console"
 	"kfqt_backend/internal/db"
 	"kfqt_backend/internal/middleware"
 	"kfqt_backend/internal/system"
@@ -34,11 +35,25 @@ func main() {
 	mux.HandleFunc("GET /api/data", middleware.SameSiteOnlyMiddleware(env.GetStatusHandler))
 	mux.HandleFunc("POST /api/booking", middleware.SameSiteOnlyMiddleware(env.BookTicketHandler))
 	mux.HandleFunc("POST /api/booking/cancel", middleware.SameSiteOnlyMiddleware(env.CancelBookingHandler))
-
+	mux.HandleFunc("GET /console/admin/{admin_console_address}", func(w http.ResponseWriter, r *http.Request) {
+		middleware.SameSiteOnlyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			console.AdminConsoleHandler(env, w, r)
+		})).ServeHTTP(w, r)
+	})
+	mux.HandleFunc("POST /console/admin/{admin_console_address}", func(w http.ResponseWriter, r *http.Request) {
+		middleware.SameSiteOnlyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			console.AdminConsoleHandler(env, w, r)
+		})).ServeHTTP(w, r)
+	})
 	loggedMux := middleware.LoggerMiddleware(mux)
+	mainMux := http.NewServeMux()
+	mainMux.Handle("/", loggedMux)
+	mainMux.HandleFunc("GET /console/ws", func(w http.ResponseWriter, r *http.Request) {
+		console.WebSocketHandler(env, w, r)
+	})
 
 	log.Println("サーバー起動: http://localhost:8080")
-	if err := http.ListenAndServe(":8080", loggedMux); err != nil {
+	if err := http.ListenAndServe(":8080", mainMux); err != nil {
 		log.Fatal(err)
 	}
 }

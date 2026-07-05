@@ -1,0 +1,8 @@
+# .dockerignore
+**/node_modules
+**/.next
+**/dist
+.git
+.github
+*.db
+*.db-journal

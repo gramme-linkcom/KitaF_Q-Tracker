@@ -10,6 +10,7 @@ type UserQueueResponse struct {
 	NextNumber			int		`json:"nextNumber"`
 	TimeRequired		int		`json:"timeRequired"`
 	IsBookingAvailable	bool	`json:"isBookingAvailable"`
+	IsServiceAvailable	bool	`json:"isServiceAvailable"`
 	IsActive      		bool	`json:"isActive"`
 	NoticeMessage 		string	`json:"noticeMessage"` // 自動計算の混雑目安
 	InfoMessage   		string	`json:"infoMessage"`   // configから読み込んだ運営の手動メッセージ

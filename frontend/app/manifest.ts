@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Q-Tracker',
     description: '学校祭アトラクション順番待ちアプリ',
     start_url: '/',
-    display: 'standalone', // 👈 これを指定すると、URLバーが消えて「完全なアプリ風」になります
-    background_color: '#141416', // あなたのスペースグレー背景
+    display: 'standalone',
+    background_color: '#141416',
     theme_color: '#1e1e22',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },

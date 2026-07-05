@@ -7,10 +7,13 @@ import (
 	"kfqt_backend/internal/repository"
 	"kfqt_backend/internal/system"
 	"net/http"
+	"sync"
 )
 
 type APIEnv struct {
 	DB *sql.DB
+	AdminSessions map[string]bool
+	SessionMu     sync.RWMutex
 }
 
 func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,9 +76,10 @@ func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
 		CurrentNumber:	currentNumber,
 		NextNumber: 	nextNumber,
 		IsBookingAvailable: config.IsBookingAvailable,
+		IsServiceAvailable: config.IsServiceAvailable,
 		IsActive:      room.IsActive,
 		NoticeMessage: noticeMessage,
-		InfoMessage:   "",
+		InfoMessage:   config.Infomation,
 	}
 
 	json.NewEncoder(w).Encode(response)

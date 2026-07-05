@@ -23,6 +23,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=frontend-builder /app/frontend/out ./public
 COPY --from=backend-builder /app/backend/server ./server
+COPY --from=backend-builder /app/backend/templates ./templates
 
 RUN chown -R appuser:appgroup /app
 

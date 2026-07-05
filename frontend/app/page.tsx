@@ -19,6 +19,8 @@ export default function Home() {
   const [isBookingAvailable, setIsBookingAvailable] = useState<boolean>(false);
   const [bookingNumber, setBookingNumber] = useState<number>(0);
   const bookingNumberRef = useRef<number>(0);
+  const [isServiceAvailable, setIsServiceAvailable] = useState<boolean>(false);
+  const [isNotificationDenied, setIsNotificationDenied] = useState<boolean>(false);
   
   const [noticeMessage, setNoticeMessage] = useState<string>(""); 
   const [infoMessage, setInfoMessage] = useState<string>("");
@@ -75,6 +77,7 @@ export default function Home() {
       setNextNumber(data.nextNumber);
       setNoticeMessage(data.noticeMessage);
       setIsBookingAvailable(data.isBookingAvailable);
+      setIsServiceAvailable(data.isServiceAvailable);
       if (data.infoMessage !== undefined) setInfoMessage(data.infoMessage);
       setRemainGroups(data.myAheadGroups ?? 0);
     } catch (error) {
@@ -87,12 +90,12 @@ export default function Home() {
       return "ホーム画面に追加してください";
     } else if (isBooked) {
       return "予約をキャンセルする";
-    } else if (isBookingAvailable) {
+    } else if (isBookingAvailable && isServiceAvailable) {
       return "整理券を発行する";
     } else {
       return "予約停止中";
     }
-  }, [isBooked, isBookingAvailable, showIosModal]);
+  }, [isBooked, isBookingAvailable, isServiceAvailable, showIosModal]);
   
   // 整理券発行
   const confirmBooking = async () => {
@@ -107,6 +110,11 @@ export default function Home() {
       setIsModalOpen(false);
     } catch (error) {
       alert("整理券の発行に失敗しました。");
+    }
+
+    setIsNotificationDenied(false)
+    if ("Notification" in window && Notification.permission === "denied") {
+      setIsNotificationDenied(true);
     }
   };
 
@@ -154,12 +162,15 @@ const confirmCancelBooking = async () => {
     };
     loadData();
     setShowIosModal(DetectIosBrowser())
+    if ("Notification" in window && Notification.permission === "denied") {
+      setIsNotificationDenied(true);
+    }
   }, []);
 
   return (
     <div>
       <header className="navbar fixed top-0 left-0 w-full h-14 bg-[#0e0e10]/80 backdrop-blur-md border-b border-zinc-800/50 flex items-center z-50">
-        <div className="w-full max-w-md mx-auto flex items-center justify-between">
+        <div className="w-full mx-4 md:mx-auto max-w-md flex items-center justify-between">
           <p className="text-xl font-light tracking-[0.15em] text-zinc-100">
             {pageTitle}
           </p>
@@ -169,15 +180,29 @@ const confirmCancelBooking = async () => {
         <div className="w-full max-w-md flex flex-col gap-6">
           <IosModal show={showIosModal} />
 
-          {infoMessage && (
+          {infoMessage &&(
             <div className="w-full bg-cyan-950/20 border border-cyan-500/20 rounded-2xl p-5 shadow-lg flex items-start gap-3 animate-fade-in">
-              <i className="bi bi-info-circle-fill text-cyan-400 text-sm mt-0.5 shrink-0"></i>
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold tracking-[0.2em] text-cyan-400/90 uppercase">
+                <span className="text-[10px] font-bold text-sm flex items-center tracking-[0.2em] text-cyan-400/90 uppercase">
+                  <i className="bi bi-info-circle-fill text-cyan-400 mt-0.5 shrink-0 mr-2"></i>
                   NOTICE / 運営からのお知らせ
                 </span>
-                <p className="text-xs font-medium text-zinc-200 leading-relaxed">
+                <p className="text-sm font-medium text-zinc-200 leading-relaxed">
                   {infoMessage}
+                </p>
+              </div>
+            </div>
+          )}
+          {isNotificationDenied && isBooked && (
+            <div className="w-full bg-amber-950/20 border border-amber-500/20 rounded-2xl p-5 shadow-lg flex items-start gap-3">
+              <div className="flex flex-col gap-1 w-full">
+                <span className="text-[10px] font-bold tracking-[0.2em] text-amber-400 bg-amber-950/50 rounded-md px-2 py-0.5 w-fit uppercase select-none flex items-center">
+                  <i className="bi bi-exclamation-triangle-fill mr-2"></i>
+                  WARNING / 通知設定オフ
+                </span>
+                <p className="text-xs font-medium text-zinc-200 leading-relaxed mt-1">
+                  ブラウザの通知設定が「ブロック」されています。<br />
+                  このままだと順番が来た際のお知らせ通知が届かないため、画面を開いたまま待ち時間をご確認ください。
                 </p>
               </div>
             </div>
@@ -194,31 +219,50 @@ const confirmCancelBooking = async () => {
           
           <div className="w-full bg-[#1e1e22] rounded-2xl border border-zinc-700/20 p-8 md:p-12 flex flex-col items-center shadow-2xl">
             
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)] animate-pulse"></span>
-              <span className="text-xs font-bold tracking-widest text-zinc-400 uppercase">OPEN</span>
-            </div>
+            {isServiceAvailable && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span className="text-xs font-bold tracking-widest text-zinc-400 uppercase">OPEN</span>
+              </div>
+            )}
+            {!isServiceAvailable && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-red-400 "></span>
+                <span className="text-xs font-bold tracking-widest text-zinc-400 uppercase">CLOSE</span>
+              </div>
+            )}
             
             <h1 className="text-2xl font-bold tracking-tight text-zinc-100 mb-8">
               {roomName}
             </h1>
 
-            <div className="text-center mb-6">
-              <span className="block text-xs font-bold tracking-widest text-zinc-500 uppercase mb-1">
-                現在の待ち時間
-              </span>
-              <div className="flex items-baseline justify-center mb-2">
-                <span className="text-xl font-medium text-zinc-400 ml-2">約</span>
-                <span className="text-8xl font-light tracking-tighter text-cyan-300 drop-shadow-[0_0_12px_rgba(103,232,249,0.15)] transition-all duration-300">
-                  {waitTime}
-                </span>
-                <span className="text-xl font-medium text-zinc-400 ml-2">分</span>
-              </div>
+            {isServiceAvailable && (
+              <div className="text-center mb-6">
+                  <span className="block text-xs font-bold tracking-widest text-zinc-500 uppercase mb-1">
+                    現在の待ち時間
+                  </span>
+                  <div className="flex items-baseline justify-center mb-2">
+                    <span className="text-xl font-medium text-zinc-400 ml-2">約</span>
+                    <span className="text-8xl font-light tracking-tighter text-cyan-300 drop-shadow-[0_0_12px_rgba(103,232,249,0.15)] transition-all duration-300">
+                      {waitTime}
+                    </span>
+                    <span className="text-xl font-medium text-zinc-400 ml-2">分</span>
+                  </div>
 
-              <div className="text-xs text-zinc-500 tracking-wider">
-                待機列: <span className="font-semibold text-zinc-300">{waitingGroups} 組</span>
+                  <div className="text-xs text-zinc-500 tracking-wider">
+                    待機列: <span className="font-semibold text-zinc-300">{waitingGroups} 組</span>
+                  </div>
               </div>
-            </div>
+            )}
+            {!isServiceAvailable && (
+              <div className="text-center mb-6">
+                  <div className="flex items-baseline justify-center mb-2">
+                    <span className="text-4xl font-bold tracking-tighter text-zinc-400 drop-shadow-[0_0_12px_rgba(103,232,249,0.15)] transition-all duration-300">
+                      受付時間外
+                    </span>
+                  </div>
+              </div>
+            )}
 
             <div className="text-xs text-zinc-500 font-mono tracking-wider mb-8">
               最終更新時刻 {lastUpdateTime}
@@ -229,7 +273,7 @@ const confirmCancelBooking = async () => {
               <span>{countdown} 秒後に自動更新</span>
             </div>
 
-            {isBookingAvailable && (
+            {isBookingAvailable && isServiceAvailable &&(
               <div className="w-full border-t border-b border-zinc-700/20 py-4 text-center mb-8">
                 <p className="text-sm font-medium text-zinc-300 leading-relaxed">
                   {noticeMessage}
@@ -246,13 +290,13 @@ const confirmCancelBooking = async () => {
                       setIsCancelModalOpen(true)
                     }
                   }}
-                disabled={!isBookingAvailable || showIosModal}
+                disabled={!isBookingAvailable || !isServiceAvailable || showIosModal}
                 className={`btn btn-block rounded-xl h-12 text-sm font-bold tracking-wide transition-all ${
                   showIosModal
                     ? 'bg-zinc-800/60 text-zinc-500 cursor-not-allowed opacity-40 border-zinc-700/10'
                     : isBooked
                       ? 'bg-red-950/40 text-red-400 border border-red-500/30 hover:bg-red-900/50 active:scale-[0.98]' 
-                      : isBookingAvailable
+                      : isBookingAvailable && isServiceAvailable
                         ? 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200 active:scale-[0.98] border-zinc-700/10 shadow-sm'
                         : 'bg-zinc-800/60 text-zinc-500 cursor-not-allowed opacity-40 border-zinc-700/10'
                 }`}

@@ -4,39 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"kfqt_backend/internal/model"
 	"log"
 	"os"
 
 	"github.com/google/uuid"
 )
-
-type Config struct {
-	PageTitle			string	`json:"page_title"`				// ヘッダー名前
-	RoomName			string 	`json:"room_name"`
-	
-	TimeRequired		int		`json:"time_required"`			// 分単位指定
-	// 時間設定の人為的ミス防止
-	TimeRequiredRangeMin int 	`json:"time_required_range_min"`	// 分単位指定
-	TimeRequiredRangeMax int 	`json:"time_required_range_max"`	// 分単位指定
-
-	ServeStartTime		string	`json:"serve_start_time"`		// HH:MM 形式
-	ServeEndTime		string	`json:"serve_end_time"`			// HH:MM 形式
-
-	Infomation			string	`json:"infomation"`				// アトラクションからのお知らせ
-	CallInAdvanceMessage string	`json:"call_in_advice_message"` // 案内直前のユーザーに送られるメッセージ
-	// 状況に応じたお知らせメッセージ
-    MessageAvailable    string `json:"message_available"`		// すぐに案内できるとき
-    MessageNormalDelay  string `json:"message_normal_delay"`	// 少し時間がかかるとき
-    MessageHeavyDelay   string `json:"message_heavy_delay"`		// 大幅に時間がかかるとき
-
-	IsEventAvailable	bool 	`json:"is_event_available"`		// システムが利用できるかどうか
-
-	//利用者がキューを入れられるかどうか
-	IsBookingAvailable	bool	`json:"is_booking_available"`	// 予約を入れられるかどうか
-
-	// adminコンソールの入口ランダム化
-	AdminConsoleAddress	string	`json:"admin_console_address"`
-}
 
 func createConfig() {
 	file, err := os.Create("./data/config.json")
@@ -53,20 +26,20 @@ func createConfig() {
 	}
 	uuidStr := newUUID.String()
 
-	defaultConfig := &Config{
+	defaultConfig := &model.Config{
 		PageTitle:				"Q-Tracker",
 		RoomName: 				"Room",
 		TimeRequired: 				5,
 		TimeRequiredRangeMin: 		1,
 		TimeRequiredRangeMax: 		10,
-		ServeStartTime: 		"17:00",
-		ServeEndTime: 			"09:00",
+		ServeStartTime: 		"09:00",
+		ServeEndTime: 			"17:00",
 		Infomation:				"",
 		CallInAdvanceMessage: 	"まもなくご案内いたします。<br />アトラクションの手前までお進みください。",
 		MessageAvailable:		"現在、すぐにご案内できます。",
 		MessageNormalDelay:		"現在、ご案内までに多少お時間がかかります。",
 		MessageHeavyDelay:		"現在、ご案内までに大幅にお時間がかかります。",
-		IsEventAvailable:		false,
+		IsServiceAvailable:		false,
 		IsBookingAvailable:		false,
 		AdminConsoleAddress:	uuidStr,
 	}
@@ -87,6 +60,13 @@ func createConfig() {
 
 func Init() {
 	fmt.Println("Initialization in progress...")
+	
+	adminPsw := os.Getenv("ADMIN_CONSOLE_PSW")
+	if (adminPsw == "") {
+		fmt.Println("[ERROR] The administrator console password has not been set.")
+		os.Exit(-1)
+	}
+
 	err := os.MkdirAll("./data", 0755)
 	if err != nil {
 		fmt.Println("Failed to create directory: ./data")
@@ -98,6 +78,8 @@ func Init() {
 	if err != nil {
 		createConfig()
 	}
+
+	log.Printf("[LOG] 管理者コンソールURL: /console/admin/%s\n", ReadConfig().AdminConsoleAddress)
 }
 
 func InitDB(database *sql.DB) {

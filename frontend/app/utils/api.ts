@@ -8,6 +8,7 @@ export interface QueueStatus {
   nextNumber: number;
   isActive: boolean;
   isBookingAvailable: boolean;
+  isServiceAvailable: boolean;
   noticeMessage: string;
   infoMessage?: string;
 }
