@@ -10,6 +10,7 @@ func migrate(db *sql.DB) error {
 	ticketsTable := `
 	CREATE TABLE IF NOT EXISTS tickets (
 		number INTEGER PRIMARY KEY AUTOINCREMENT,
+		uuid TEXT NOT NULL,
 		device_id TEXT,
 		status TEXT NOT NULL DEFAULT 'waiting',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP

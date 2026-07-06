@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"html/template"
+	"kfqt_backend/internal/model"
 	"kfqt_backend/internal/repository"
 	"kfqt_backend/internal/system"
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -35,7 +37,7 @@ func checkAdminAuth(r *http.Request) bool {
 	return adminSessions[cookie.Value]
 }
 
-func AdminConsoleHandler(w http.ResponseWriter, r *http.Request) {
+func (env *APIEnv) AdminConsoleHandler(w http.ResponseWriter, r *http.Request) {
 	config := system.ReadConfig()
 	adminAddress := r.PathValue("admin_console_address")
 
@@ -100,8 +102,25 @@ func AdminConsoleHandler(w http.ResponseWriter, r *http.Request) {
 		NextNumber    int
 		CurrentNumber int
 		WaitingGroups int
-		Tickets       []repository.Ticket
+		Tickets       []model.Ticket
 		Config        map[string]interface{}
+	}
+
+	tickets, err := repository.GetActiveTickets(env.DB)
+	if err != nil {
+		log.Fatalln("DBからのデータ取得に失敗しました。DBが破損している可能性があります。")
+		return
+	}
+
+	// 取得したデータをもとに、API側でロジック計算を行う
+	waitingGroups := len(tickets)
+	currentNumber := 0
+	nextNumber	  := 0
+	if len(tickets) > 0 {
+		currentNumber = tickets[0].Number
+	}
+	if len(tickets) > 1 {
+		nextNumber = tickets[1].Number
 	}
 
 	cfg := system.ReadConfig()
@@ -121,10 +140,10 @@ func AdminConsoleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := CombinedAdminData{
-		NextNumber:    1,
-		CurrentNumber: 0,
-		WaitingGroups: 0,
-		Tickets:       []repository.Ticket{},
+		NextNumber:    nextNumber,
+		CurrentNumber: currentNumber,
+		WaitingGroups: waitingGroups,
+		Tickets:       []model.Ticket{},
 		Config:        configData,
 	}
 

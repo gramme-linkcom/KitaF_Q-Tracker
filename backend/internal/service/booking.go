@@ -29,14 +29,14 @@ func (env *APIEnv) BookTicketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bookingNumber, err := repository.CreateUserTicket(env.DB, req.PushToken)
+	bookingData, err := repository.CreateUserTicket(env.DB, req.PushToken)
 	if err != nil {
 		log.Printf("[ERROR] 整理券の発行失敗: %v", err)
 		http.Error(w, `{"error": "Server error"}`, http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("[INFO] 整理券を発行(発行者: ユーザー): 番号=%d", bookingNumber)
+	log.Printf("[INFO] 整理券を発行(発行者: ユーザー): 番号=%d", bookingData.TicketNumber)
 
 	// 管理者コンソールへ送出
 	tickets, err := repository.GetActiveTickets(env.DB)
@@ -45,15 +45,16 @@ func (env *APIEnv) BookTicketHandler(w http.ResponseWriter, r *http.Request) {
 		for _, t := range tickets {
 			queueData = append(queueData, t)
 		}
-		select {
-		case QueueUpdateChan <- queueData:
-		default:
-			log.Println("[WS] チャンネルが詰まっているためスキップしました")
-		}
+
+		BroadcastQueue(BroadcastDatas{
+			PushType: "queue_update",
+			Queue:    queueData,
+		})
 	}
 
 	response := model.BookingResponse{
-		BookingNumber: int(bookingNumber),
+		BookingNumber: bookingData.TicketNumber,
+		Uuid:	bookingData.Uuid,
 		Success:       true,
 	}
 

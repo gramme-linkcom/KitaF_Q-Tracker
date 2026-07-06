@@ -13,6 +13,15 @@ export interface QueueStatus {
   infoMessage?: string;
 }
 
+export async function getTicketExists(bookingNumber: number, uuid: string): Promise<boolean> {
+  let url = `/api/exists_ticket?myNumber=${bookingNumber}&uuid=${uuid}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("データの取得に失敗しました");
+
+  const data = await response.json();
+  return data.isTicketAvailable;
+}
+
 // 現在の状況を取得する (GET)
 export async function fetchQueueStatus(bookingNumber: number): Promise<QueueStatus> {
   let url = "/api/data";
@@ -27,7 +36,7 @@ export async function fetchQueueStatus(bookingNumber: number): Promise<QueueStat
 }
 
 // 整理券を発行する (POST)
-export async function bookTicket(pushToken: string = ""): Promise<{ bookingNumber: number; success: boolean }> {
+export async function bookTicket(pushToken: string = ""): Promise<{ bookingNumber: number; uuid: string; success: boolean }> {
   const response = await fetch("/api/booking", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -8,7 +8,7 @@ import IosModal from "./components/IosModal";
 import DetectIosBrowser from "./utils/DetectIosBrowser";
 import BookingDataModal from "./components/BookingDataModal";
 import BookingCancelModal from "./components/BookingCancelModal";
-import { bookTicket, cancelTicket, fetchQueueStatus } from "./utils/api";
+import { bookTicket, cancelTicket, fetchQueueStatus, getTicketExists } from "./utils/api";
 
 export default function Home() {
   const REFRESH_INTERVAL_SEC = 30;
@@ -104,6 +104,7 @@ export default function Home() {
       await handleRefresh(data.bookingNumber);
       setBookingNumber(data.bookingNumber);
       localStorage.setItem('booking_number', `${data.bookingNumber}`);
+      localStorage.setItem('booking_uuid', `${data.uuid}`)
       setShowBookingData(true);
       setIsBooked(true);
       setShowToast(true);
@@ -123,6 +124,7 @@ const confirmCancelBooking = async () => {
   try {
     await cancelTicket(bookingNumber);
     localStorage.removeItem('booking_number');
+    localStorage.removeItem('booking_uuid');
     setIsBooked(false);
     setIsCancelModalOpen(false);
     setShowBookingData(false);
@@ -159,13 +161,20 @@ const confirmCancelBooking = async () => {
   useEffect(() => {
     const loadData = async () => {
       const localNumber = localStorage.getItem('booking_number');
+      const localTicketUUID = localStorage.getItem('booking_uuid');
       
-      if (localNumber != null) {
+      if (localNumber != null && localTicketUUID != null) {
         const num = Number(localNumber);
-        setBookingNumber(num);
-        setShowBookingData(true);
-        setIsBooked(true);
-        await handleRefresh(num);
+        if (await getTicketExists(num, localTicketUUID)){
+          setBookingNumber(num);
+          setShowBookingData(true);
+          setIsBooked(true);
+          await handleRefresh(num);
+        } else {
+          localStorage.removeItem('booking_number');
+          localStorage.removeItem('booking_uuid');
+        }
+
       } else {
         await handleRefresh();
       }

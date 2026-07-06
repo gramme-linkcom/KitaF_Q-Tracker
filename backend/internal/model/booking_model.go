@@ -7,6 +7,7 @@ type BookingRequest struct {
 // 予約成功時にフロントへ返すJSONの形
 type BookingResponse struct {
 	BookingNumber int  `json:"bookingNumber"` // 発行された整理券番号
+	Uuid		  string `json:"uuid"`
 	Success       bool `json:"success"`
 }
 

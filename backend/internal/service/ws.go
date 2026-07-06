@@ -7,33 +7,32 @@ import (
 	"sync"
 
 	"kfqt_backend/internal/model"
+	"kfqt_backend/internal/repository"
 	"kfqt_backend/internal/system"
 
 	"github.com/gorilla/websocket"
 )
 
-var ActiveAdminConn *websocket.Conn
-var ConnMu sync.Mutex // 同時書き込みによるクラッシュを防ぐ安全弁
-var QueueUpdateChan = make(chan []interface{}, 10)
-
-// QueueUpdateChannnelを監視して、データが来たらWSにブロードキャストするループ関数
-func StartQueueBroadcastLoop() {
-	for queueData := range QueueUpdateChan {
-		broadcastQueue(queueData)
-	}
+type BroadcastDatas struct {
+	PushType	string
+	Queue		[]interface{}
 }
 
-func broadcastQueue(queueData []interface{}) {
+var ActiveAdminConn *websocket.Conn
+var ConnMu sync.Mutex
+
+func BroadcastQueue(data BroadcastDatas) {
 	ConnMu.Lock()
 	defer ConnMu.Unlock()
 
 	if ActiveAdminConn == nil {
+		log.Println("[LOG] 接続中の管理画面が存在しませんでした。")
 		return
 	}
 
 	payload := map[string]interface{}{
-		"type":  "queue_update",
-		"queue": queueData,
+		"type":  data.PushType,
+		"queue": data.Queue,
 	}
 
 	// ログイン中の「唯一の1台」に直接送信！
@@ -43,6 +42,8 @@ func broadcastQueue(queueData []interface{}) {
 		ActiveAdminConn.Close()
 		ActiveAdminConn = nil
 	}
+
+	log.Println("BroadcastQueue を実行しました。")
 }
 
 type Response struct {
@@ -59,7 +60,7 @@ var upgrader = websocket.Upgrader{
 }
 
 // WebSocketHandler は最小限の接続維持と初期データ送信を行います
-func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
+func (env *APIEnv) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	if !checkAdminAuth(r) {
 		http.Error(w, "Unauthorized Session", http.StatusUnauthorized)
 		log.Println("[WS_AUTH_ERROR] 無効なセッションからのWebSocket接続を拒否しました")
@@ -71,8 +72,21 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("WebSocket connection failed:", err)
 		return
 	}
+	
+	ConnMu.Lock()
+	ActiveAdminConn = conn
+	ConnMu.Unlock()
+	log.Println("[WS_CONNECT] 管理画面のWebSocketが正常に接続・登録されました。")
+
 	defer func() {
 		conn.Close()
+
+		ConnMu.Lock()
+		if ActiveAdminConn == conn { // 自分自身の接続ならnilにする
+			ActiveAdminConn = nil
+		}
+		ConnMu.Unlock()
+		log.Println("[WS_DISCONNECT] 管理画面のWebSocketが切断されました。")
 
 		cookie, err := r.Cookie("admin_session")
 		if err == nil {
@@ -83,7 +97,7 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	sendInitialState(conn)
+	env.sendInitialState(conn)
 
 	for {
 		_, msg, err := conn.ReadMessage()
@@ -108,14 +122,31 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func sendInitialState(conn *websocket.Conn) {
+func (env *APIEnv) sendInitialState(conn *websocket.Conn) {
+	tickets, err := repository.GetActiveTickets(env.DB)
+	if err != nil {
+		log.Fatalln("DBからのデータ取得に失敗しました。DBが破損している可能性があります。")
+		return
+	}
+
+	// 取得したデータをもとに、API側でロジック計算を行う
+	waitingGroups := len(tickets)
+	currentNumber := 0
+	nextNumber	  := 0
+	if len(tickets) > 0 {
+		currentNumber = tickets[0].Number
+	}
+	if len(tickets) > 1 {
+		nextNumber = tickets[1].Number
+	}
+
 	cfg := system.ReadConfig()
 
 	// admin.html の updateDOM がそのままパースできる器
 	initialData := map[string]interface{}{
-		"nextNumber":    1,
-		"currentNumber": 0,
-		"waitingGroups": 0,
+		"nextNumber":    nextNumber,
+		"currentNumber": currentNumber,
+		"waitingGroups": waitingGroups,
 		"tickets":       []interface{}{}, // 待ち列一覧（空）
 		"config": map[string]interface{}{
 			"page_title":              cfg.PageTitle,

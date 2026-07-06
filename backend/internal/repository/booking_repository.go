@@ -2,22 +2,32 @@ package repository
 
 import (
 	"database/sql"
+	"kfqt_backend/internal/model"
+
+	"github.com/google/uuid"
 )
 
-func CreateUserTicket(db *sql.DB, pushToken string) (int, error) {
-	query := "INSERT INTO tickets (status, device_id) VALUES ('waiting', ?)"
+func CreateUserTicket(db *sql.DB, pushToken string) (model.ResultTicket, error) {
+	resultData := model.ResultTicket{
+		Uuid: uuid.NewString(),
+		TicketNumber: 0,
+	}
+
+	query := "INSERT INTO tickets (status, uuid, device_id) VALUES ('waiting', ?, ?)"
 	
-	result, err := db.Exec(query, pushToken)
+	result, err := db.Exec(query, resultData.Uuid, pushToken)
 	if err != nil {
-		return 0, err
+		return resultData, err
 	}
 
 	lastID, err := result.LastInsertId()
 	if err != nil {
-		return 0, err
+		return resultData, err
 	}
 
-	return int(lastID), nil
+	resultData.TicketNumber = int(lastID)
+
+	return resultData, nil
 }
 
 // CancelUserTicket はユーザーが自分のスマホから整理券をキャンセルした時にステータスを書き換える

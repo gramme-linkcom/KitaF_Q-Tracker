@@ -1,6 +1,5 @@
 package model
 
-import "kfqt_backend/internal/repository"
 
 type UserQueueResponse struct {
 	WaitTime           int    `json:"waitTime"`
@@ -25,5 +24,17 @@ type AdminQueueResponse struct {
 	IsActive           bool            `json:"isActive"`
 	NoticeMessage      string          `json:"noticeMessage"`
 	InfoMessage        string          `json:"infoMessage"`
-	Tickets            []repository.Ticket `json:"tickets"`
+	Tickets            []Ticket `json:"tickets"`
+}
+
+type Ticket struct {
+	Number 		int    `json:"number"`
+	Uuid		string `json:"uuid"`
+	DeviceID	string `json:"device_id"`
+	Status 		string `json:"status"` // "waiting", "called", "canceled", "absent"
+}
+
+type ResultTicket struct {
+	Uuid	string		`json:"uuid"`
+	TicketNumber int	`json:"ticketNumber"` 
 }
