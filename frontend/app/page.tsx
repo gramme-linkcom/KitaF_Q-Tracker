@@ -110,7 +110,7 @@ export default function Home() {
       setShowToast(true);
       setIsModalOpen(false);
     } catch (error) {
-      alert("整理券の発行に失敗しました。");
+      alert("整理券の発行に失敗しました。もう一度お試しください。");
     }
 
     setIsNotificationDenied(false)
@@ -173,6 +173,7 @@ const confirmCancelBooking = async () => {
         } else {
           localStorage.removeItem('booking_number');
           localStorage.removeItem('booking_uuid');
+          await handleRefresh()
         }
 
       } else {

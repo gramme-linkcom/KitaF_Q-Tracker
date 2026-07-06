@@ -11,6 +11,7 @@ import (
 
 func (env *APIEnv) BookTicketHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	cfg := system.ReadConfig()
 
 	if r.Method != http.MethodPost {
 		http.Error(w, `{"error": "Method Not Allowed"}`, http.StatusMethodNotAllowed)
@@ -24,7 +25,7 @@ func (env *APIEnv) BookTicketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !system.ReadConfig().IsBookingAvailable {
+	if (!cfg.IsBookingAvailable || !IsWithinServeTime(cfg.ServeStartTime, cfg.ServeEndTime) || !cfg.IsServiceAvailable) {
 		http.Error(w, `{"error": "ただいま整理券の新規発行を停止しております"}`, http.StatusBadRequest)
 		return
 	}

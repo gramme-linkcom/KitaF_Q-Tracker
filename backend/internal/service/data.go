@@ -6,11 +6,53 @@ import (
 	"kfqt_backend/internal/model"
 	"kfqt_backend/internal/repository"
 	"kfqt_backend/internal/system"
+	"log"
 	"net/http"
+	"time"
+	_ "time/tzdata"
 )
 
 type APIEnv struct {
 	DB *sql.DB
+}
+
+// IsWithinServeTime は現在時刻が config の稼働時間内（開始〜終了）にあるかを判定します
+func IsWithinServeTime(startTimeStr, endTimeStr string) bool {
+	// 1. 日本時間（JST）のロケーションを取得（サーバーが海外にあってもバグらせないため）
+	jst, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		log.Printf("[ERROR] タイムゾーンの読み込みに失敗: %v", err)
+		return false
+	}
+
+	// 2. 現在の日本時刻を取得
+	now := time.Now().In(jst)
+
+	// 3. 比較用に「今日の年・月・日」のフォーマット文字列を作る (例: "2026-07-07 ")
+	todayStr := now.Format("2006-01-02 ")
+
+	// 4. "2006-01-02 15:04" というレイアウト型紙を使って、configの文字列を今日のTime型にパースする
+	layout := "2006-01-02 15:04"
+	
+	parsedStart, err := time.ParseInLocation(layout, todayStr+startTimeStr, jst)
+	if err != nil {
+		log.Printf("[ERROR] 開始時刻のパースに失敗 (%s): %v", startTimeStr, err)
+		return false
+	}
+
+	parsedEnd, err := time.ParseInLocation(layout, todayStr+endTimeStr, jst)
+	if err != nil {
+		log.Printf("[ERROR] 終了時刻のパースに失敗 (%s): %v", endTimeStr, err)
+		return false
+	}
+
+	// 5. time.Before() と time.After() を使って、現在時刻がその間にあるか比較！
+	// now が parsedStart より後（または同時）、かつ parsedEnd より前（または同時）なら true
+	if (now.After(parsedStart) || now.Equal(parsedStart)) && (now.Before(parsedEnd) || now.Equal(parsedEnd)) {
+		return true
+	}
+
+	return false
 }
 
 func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +106,11 @@ func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
 		noticeMessage = config.MessageNormalDelay
 	}
 
+	isServiceAvailable := false
+	if (config.IsServiceAvailable == true) {
+		isServiceAvailable = IsWithinServeTime(config.ServeStartTime, config.ServeEndTime)
+	}
+
 	// 3. レスポンスデータを組み立てて送出
 	response := model.UserQueueResponse{
 		WaitTime:      waitTime,
@@ -73,7 +120,7 @@ func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
 		CurrentNumber:	currentNumber,
 		NextNumber: 	nextNumber,
 		IsBookingAvailable: config.IsBookingAvailable,
-		IsServiceAvailable: config.IsServiceAvailable,
+		IsServiceAvailable: isServiceAvailable,
 		IsActive:      room.IsActive,
 		NoticeMessage: noticeMessage,
 		InfoMessage:   config.Infomation,

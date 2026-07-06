@@ -60,6 +60,14 @@
             line-height: 1;
         }
 
+        /* ★ 現在案内中用の巨大数字スタイル */
+        .active-group-counter {
+            font-size: 4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+
         .custom-toast {
             background-color: rgba(26, 27, 32, 0.95) !important;
             border: 1px solid #2d2f36 !important;
@@ -151,26 +159,43 @@
             </div>
 
             <div class="col-md-8">
-                <div class="custom-card p-4 mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h3 class="h4 mb-0 fw-bold"><i class="bi bi-people-fill me-2 text-success"></i>現在の待機列</h3>
-                        <div class="text-end d-flex align-items-center gap-3">
-                            <span class="text-muted-custom small fw-bold">待機組数:</span>
-                            <span class="big-counter" id="queue-count">{{.WaitingGroups}}</span>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="custom-card p-4 d-flex flex-column justify-content-center border-cyan border-opacity-20" style="min-height: 140px; background: linear-gradient(145deg, #1a1b20, #15161a);">
+                            <span class="text-xs font-bold tracking-widest text-cyan-400 uppercase mb-2">
+                                <i class="bi bi-door-open-fill me-1"></i>CURRENTLY CALLING / 現在案内中
+                            </span>
+                            <div id="active-group-display" class="active-group-counter text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+                                案内中なし
+                            </div>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="custom-card p-4 d-flex flex-column justify-content-between" style="min-height: 140px;">
+                            <span class="text-xs font-bold tracking-widest text-success uppercase mb-2">
+                                <i class="bi bi-people-fill me-1"></i>WAITING QUEUE / 待機状況
+                            </span>
+                            <div class="d-flex justify-content-between align-items-baseline mt-auto">
+                                <span class="text-muted-custom small fw-bold">現在の待機組数:</span>
+                                <span class="big-counter" id="queue-count">{{.WaitingGroups}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
+                <div class="custom-card p-4 mb-4">
                     <div class="table-responsive">
-                        <table class="table table-dark table-striped align-middle border-secondary border-opacity-30">
+                        <table class="table table-dark table-striped align-middle border-secondary border-opacity-30 mb-0">
                             <thead>
                                 <tr class="border-bottom border-secondary">
-                                    <th style="color: #adb5bd !important;">受付番号</th>
-                                    <th style="color: #adb5bd !important;">人数</th>
+                                    <th style="color: #adb5bd !important; width: 30%;">受付番号</th>
+                                    <th style="color: #adb5bd !important; width: 70%; text-align: right;">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="queue-tbody">
                                 <tr>
-                                    <td colspan="3" class="text-center text-muted-custom py-5 fs-5">現在、待機しているグループはありません。</td>
+                                    <td colspan="2" class="text-center text-muted-custom py-5 fs-5">現在、待機しているグループはありません。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -180,9 +205,14 @@
                 <div class="custom-card p-4">
                     <h3 class="h4 mb-3 fw-bold"><i class="bi bi-play-circle me-2 text-warning"></i>進行操作</h3>
                     <div class="row g-3">
-                        <div class="col-md-5">
-                            <button class="btn btn-warning w-100 py-3 fs-5 text-dark fw-bold" onclick="controlQueue('call_next')">
-                                <i class="bi bi-megaphone-fill me-2"></i>次の組を呼び出す
+                        <div class="col-md-3">
+                            <button id="btn-group-enter" class="btn btn-success w-100 py-3 fs-5 fw-bold" onclick="controlQueue('group_enter')" disabled>
+                                <i class="bi bi-box-arrow-in-right me-2"></i>グループ入場
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button id="btn-group-exit" class="btn btn-outline-success w-100 py-3 fs-5 fw-bold" onclick="controlQueue('group_exit')" disabled>
+                                <i class="bi bi-box-arrow-right me-2"></i>グループ退場
                             </button>
                         </div>
                         <div class="col-md-4">
@@ -190,7 +220,7 @@
                                 <i class="bi bi-trash3-fill me-2"></i>待機列を全消去
                             </button>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <button class="btn btn-outline-light w-100 py-3 fs-5" onclick="controlQueue('refresh')">
                                 <i class="bi bi-arrow-clockwise me-2"></i>更新
                             </button>
@@ -270,6 +300,38 @@
         </div>
     </div>
 
+    <div class="modal fade" id="cancelConfirmModal" tabindex="-1" aria-labelledby="cancelConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-light border-secondary border-opacity-30" style="background-color: #1a1b20 !important;">
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-x-circle text-secondary fs-1 mb-3 d-block"></i>
+                    <h5 class="fw-bold mb-2">整理券キャンセル確認</h5>
+                    <p class="text-muted-custom small mb-4">整理券 <span id="modal-cancel-number" class="text-primary fw-bold"></span> を本当にキャンセルしますか？<br>この操作は取り消せません。</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-light flex-grow-1 py-2" data-bs-dismiss="modal">戻る</button>
+                        <button type="button" class="btn btn-secondary flex-grow-1 py-2 fw-bold" id="btn-modal-cancel-confirm">キャンセル実行</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="absentConfirmModal" tabindex="-1" aria-labelledby="absentConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-light border-danger border-opacity-30" style="background-color: #1a1b20 !important;">
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-person-x text-danger fs-1 mb-3 d-block"></i>
+                    <h5 class="fw-bold mb-2 text-danger">不在削除の確認</h5>
+                    <p class="text-muted-custom small mb-4">整理券 <span id="modal-absent-number" class="text-danger fw-bold"></span> の呼び出し時に不在だったため、列から削除しますか？</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-light flex-grow-1 py-2" data-bs-dismiss="modal">戻る</button>
+                        <button type="button" class="btn btn-danger flex-grow-1 py-2 fw-bold" id="btn-modal-absent-confirm">不在削除を実行</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1085;"></div>
 
     <footer class="w-100 text-center py-3 mt-5">
@@ -281,21 +343,20 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // ★ グローバルで現在の入場中番号を記憶する変数
+        let currentCallingNumber = null;
+        let latestFullQueue = [];
+
         document.addEventListener("DOMContentLoaded", function() {
             const form = document.getElementById("configForm");
             const modal = document.getElementById("advancedConfigModal");
             form.appendChild(modal);
-            
-            // ページロード時に最初の接続をキック
             connectWS();
         });
 
-        // ★ グローバル変数としてWebSocketインスタンスを保持
         let ws = null;
 
-        // ★ WebSocket接続を確立・再確立する関数
         function connectWS() {
-            // もし古い接続が生きていたら、イベントリスナーを解除して安全に閉じる（ゴミ残りのバグ防止）
             if (ws) {
                 ws.onopen = null;
                 ws.onerror = null;
@@ -304,7 +365,6 @@
                 ws.close();
             }
 
-            // 再接続ボタンを一旦ループさせて非表示、バッジを読み込み中に変更
             document.getElementById('reconnect-btn').classList.add('d-none');
             const badge = document.getElementById('connection-badge');
             badge.className = "badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-50 px-3 py-2 rounded-pill";
@@ -328,8 +388,6 @@
                 console.log('[WS] 接続が切断されました'); 
                 badge.className = "badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-50 px-3 py-2 rounded-pill";
                 badge.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2 small"></i>DISCONNECTED';
-                
-                // ★ 接続が切れたときだけ、再接続ボタンの「d-none（非表示クラス）」を解除して出現させる！
                 document.getElementById('reconnect-btn').classList.remove('d-none');
             };
 
@@ -339,6 +397,9 @@
                     if (data.type === 'queue_update') {
                         updateQueueTable(data.queue);
                     }
+                    if (data.type === 'operation_denied') {
+                        showErrorToast(data.message || "システムにより操作が拒否されました。");
+                    }
                 } catch (e) {
                     console.error('[WS] メッセージのパースに失敗:', e);
                 }
@@ -346,27 +407,70 @@
         }
 
         function updateQueueTable(queue) {
+            latestFullQueue = queue || []; // 最新のキューをキャッシュ
             const tbody = document.getElementById('queue-tbody');
             const countBadge = document.getElementById('queue-count');
+            const btnEnter = document.getElementById('btn-group-enter');
+            const btnExit = document.getElementById('btn-group-exit');
             
-            // 1. 待機組数のカウントをリアルタイムに更新
-            countBadge.innerText = queue ? queue.length : 0;
+            const queueLength = latestFullQueue.length;
+            countBadge.innerText = queueLength;
             tbody.innerHTML = '';
 
-            // 2. 待機ユーザーが1組以上いる場合のループ処理
-            if (queue && queue.length > 0) {
-                queue.forEach(group => {
+            // キューが0組なら、現在誰も入場中でない場合のみ入場をdisabled化
+            if (queueLength === 0) {
+                if (currentCallingNumber === null) {
+                    btnEnter.disabled = true;
+                }
+            } else {
+                // キューが1組以上ある場合、退場ボタンが押されていない（＝まだ誰も入場していない）ときだけ入場を許可
+                if (btnExit.disabled === true) {
+                    btnEnter.disabled = false;
+                }
+            }
+
+            if (latestFullQueue && queueLength > 0) {
+                latestFullQueue.forEach(group => {
                     const row = `<tr>
-                        <td class="fw-bold text-primary" style="font-size: 1.1rem;">#${group.number}</td>
-                        <td class="fw-bold text-light">${groupName}</td>
-                        <td><span class="badge bg-secondary fs-6 px-3 py-1.5 rounded-pill">${group.size} 名</span></td>
+                        <td class="fw-bold text-white" style="font-size: 1.2rem;">${group.number}番</td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-2">
+                                <button class="btn btn-sm btn-outline-secondary px-3" onclick="openCancelModal(${group.number})">
+                                    <i class="bi bi-x-circle me-1"></i>キャンセル
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger px-3" onclick="openAbsentModal(${group.number})">
+                                    <i class="bi bi-person-x me-1"></i>不在削除
+                                </button>
+                            </div>
+                        </td>
                     </tr>`;
                     tbody.innerHTML += row;
                 });
             } else {
-                // 3. 待機ユーザーが0人の場合のクリーンな表示
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted-custom py-5 fs-5">現在、待機しているグループはありません。</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted-custom py-5 fs-5">現在、待機しているグループはありません。</td></tr>`;
             }
+        }
+
+        function openCancelModal(ticketNumber) {
+            document.getElementById('modal-cancel-number').innerText = `#${ticketNumber}`;
+            const cancelModal = new bootstrap.Modal(document.getElementById('cancelConfirmModal'));
+            cancelModal.show();
+
+            document.getElementById('btn-modal-cancel-confirm').onclick = function() {
+                cancelModal.hide();
+                controlQueue('cancel_ticket', ticketNumber);
+            };
+        }
+
+        function openAbsentModal(ticketNumber) {
+            document.getElementById('modal-absent-number').innerText = `#${ticketNumber}`;
+            const absentModal = new bootstrap.Modal(document.getElementById('absentConfirmModal'));
+            absentModal.show();
+
+            document.getElementById('btn-modal-absent-confirm').onclick = function() {
+                absentModal.hide();
+                controlQueue('absent_ticket', ticketNumber);
+            };
         }
 
         function showSuccessToast(message = "データを更新しました。") {
@@ -387,19 +491,37 @@
 
             const toastNode = toastWrapper.firstChild;
             container.appendChild(toastNode);
-
             const bootstrapToast = new bootstrap.Toast(toastNode);
             bootstrapToast.show();
+            toastNode.addEventListener('hidden.bs.toast', function () { toastNode.remove(); });
+        }
 
-            toastNode.addEventListener('hidden.bs.toast', function () {
-                toastNode.remove();
-            });
+        function showErrorToast(reasonMessage) {
+            const container = document.getElementById('toastContainer');
+            const toastWrapper = document.createElement('div');
+            toastWrapper.innerHTML = `
+                <div class="toast custom-toast text-light show border-danger border-opacity-40" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000" style="background-color: rgba(30, 18, 20, 0.98) !important;">
+                    <div class="toast-body d-flex align-items-center py-3 px-4">
+                        <i class="bi bi-exclamation-octagon-fill text-danger fs-4 me-3"></i>
+                        <div>
+                            <strong class="d-block mb-0.5 text-danger" style="letter-spacing: 0.05em;">OPERATION DENIED</strong>
+                            <span style="color: #e0c0c0; font-size: 0.9rem;">${reasonMessage}</span>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white ms-auto m-0" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `.trim();
+
+            const toastNode = toastWrapper.firstChild;
+            container.appendChild(toastNode);
+            const bootstrapToast = new bootstrap.Toast(toastNode);
+            bootstrapToast.show();
+            toastNode.addEventListener('hidden.bs.toast', function () { toastNode.remove(); });
         }
 
         function submitConfig(event, isForced = false) {
             if (event) event.preventDefault();
             const formData = new FormData(document.getElementById('configForm'));
-
             const timeRequired = parseInt(formData.get('time_required')) || 0;
             const minRange = parseInt(formData.get('time_required_range_min')) || 0;
             const maxRange = parseInt(formData.get('time_required_range_max')) || 0;
@@ -407,10 +529,8 @@
             if (!isForced && (timeRequired < minRange || timeRequired > maxRange)) {
                 document.getElementById('warn-current-value').innerText = `${timeRequired} 分`;
                 document.getElementById('warn-range-value').innerText = `${minRange} 分 ～ ${maxRange} 分`;
-
                 const warningModal = new bootstrap.Modal(document.getElementById('anomalyWarningModal'));
                 warningModal.show();
-
                 document.getElementById('btn-force-submit').onclick = function() {
                     warningModal.hide();
                     submitConfig(null, true);
@@ -418,9 +538,8 @@
                 return false;
             }
 
-            // 接続が切れている時はパケットを送らずに警告トーストを出す（エラーガード）
             if (!ws || ws.readyState !== WebSocket.OPEN) {
-                showSuccessToast("エラー: 現在通信が切断されています。再接続を試みてください。");
+                showErrorToast("現在通信が切断されています。再接続を試みてください。");
                 return false;
             }
 
@@ -438,7 +557,6 @@
             };
 
             ws.send(JSON.stringify(payload));
-            console.log('[WS] 設定をサーバーへ送信しました:', payload);
             showSuccessToast();
             return false;
         }
@@ -446,18 +564,69 @@
         function triggerConfigUpdate() { 
             const isChecked = document.getElementById('switch_booking_available').checked;
             document.getElementById('label_booking_status').innerText = isChecked ? "発券受付中" : "発券停止中";
-
             const isServiceChecked = document.getElementById('switch_service_available').checked;
             document.getElementById('label_service_status').innerText = isServiceChecked ? "サービス稼働中" : "サービス停止中";
-
             submitConfig({ preventDefault: () => {} }); 
         }
 
-        function controlQueue(action) { 
+        function controlQueue(action, ticketNumber = null) { 
             let actionName = "更新しました";
-            if(action === 'call_next') actionName = "次の組を呼び出しました";
-            if(action === 'clear_all') actionName = "待機列を全消去しました";
+            const btnEnter = document.getElementById('btn-group-enter');
+            const btnExit = document.getElementById('btn-group-exit');
+            const activeDisplay = document.getElementById('active-group-display');
+
+            if(action === 'group_enter') {
+                // ★ 現在待機している先頭の組を取得して案内中にセット
+                if (latestFullQueue && latestFullQueue.length > 0) {
+                    currentCallingNumber = latestFullQueue[0].number;
+                    activeDisplay.innerText = `#${currentCallingNumber} 入場中`;
+                } else {
+                    currentCallingNumber = "???";
+                    activeDisplay.innerText = `入場中`;
+                }
+
+                actionName = "次のグループを入場させました";
+                btnEnter.disabled = true;
+                btnExit.disabled = false;
+            }
+            if(action === 'group_exit') {
+                actionName = "現在のグループを退場させました";
+                
+                // ★ 案内中をリセット
+                currentCallingNumber = null;
+                activeDisplay.innerText = "案内中なし";
+
+                btnExit.disabled = true;
+
+                const currentQueueCount = parseInt(document.getElementById('queue-count').innerText) || 0;
+                if (currentQueueCount > 0) {
+                    btnEnter.disabled = false;
+                } else {
+                    btnEnter.disabled = true;
+                }
+            }
+            if(action === 'clear_all') {
+                actionName = "待機列を全消去しました";
+                currentCallingNumber = null;
+                activeDisplay.innerText = "案内中なし";
+                btnEnter.disabled = true;
+                btnExit.disabled = true;
+            }
+            if(action === 'cancel_ticket') actionName = `整理券 #${ticketNumber} をキャンセルしました`;
+            if(action === 'absent_ticket') actionName = `整理券 #${ticketNumber} を不在のため削除しました`;
             
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const payload = {
+                    action: action,
+                    number: ticketNumber
+                };
+                ws.send(JSON.stringify(payload));
+                console.log('[WS] 進行操作をサーバーへ送信しました:', payload);
+            } else {
+                showErrorToast("エラー: サーバーとの通信が切断されているため、操作を送信できませんでした。");
+                return;
+            }
+
             showSuccessToast(actionName);
         }
     </script>

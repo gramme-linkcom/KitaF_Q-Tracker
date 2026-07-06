@@ -23,6 +23,16 @@ func Open() (*sql.DB, error) {
 		database.Close()
 		return nil, err
 	}
+	
+	if _, err := database.Exec(`PRAGMA journal_mode = WAL;`); err != nil {
+		database.Close()
+		return nil, err
+	}
+
+	if _, err := database.Exec(`PRAGMA busy_timeout = 5000;`); err != nil {
+		database.Close()
+		return nil, err
+	}
 
 	return database, nil
 }

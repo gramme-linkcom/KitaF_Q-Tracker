@@ -7,7 +7,7 @@ import (
 )
 
 func ExistsTicket(db *sql.DB, id uuid.UUID, number int) (bool, error) {
-	query := "SELECT EXISTS(SELECT 1 FROM tickets WHERE number = ? AND uuid = ?);"
+	query := "SELECT EXISTS(SELECT 1 FROM tickets WHERE number = ? AND uuid = ? AND status = 'waiting');"
 	var exists bool
 	err := db.QueryRow(query, number, id.String()).Scan(&exists)
 	if err != nil {

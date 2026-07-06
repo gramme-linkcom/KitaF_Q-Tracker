@@ -18,6 +18,11 @@ type BroadcastDatas struct {
 	Queue		[]interface{}
 }
 
+type AdminActionPacket struct {
+	Action string `json:"action"`
+	Number int    `json:"number"`
+}
+
 var ActiveAdminConn *websocket.Conn
 var ConnMu sync.Mutex
 
@@ -111,14 +116,61 @@ func (env *APIEnv) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		var newConfigData model.Config
-		err = json.Unmarshal(msg, &newConfigData)
-		if err != nil {
-			log.Printf("[ERROR] JSONの変換に失敗しました: %v", err)
-			return
+		var actionData AdminActionPacket
+		_ = json.Unmarshal(msg, &actionData)
+
+		if actionData.Action != "" {
+			// 操作コマンドだった場合の処理
+			log.Printf("[WS_ACTION] 操作を受信しました: Action=%s, Number=%d", actionData.Action, actionData.Number)
+			
+			switch actionData.Action {
+			case "cancel_ticket":
+				err := repository.CancelUserTicket(env.DB, actionData.Number)
+				if err != nil {
+					log.Println("[ERROR] 整理券をキャンセルできませんでした。")
+				}
+				tickets, _ := repository.GetActiveTickets(env.DB)
+				if err == nil {
+					var queueData []interface{}
+					for _, t := range tickets {
+						queueData = append(queueData, t)
+					}
+					BroadcastQueue(BroadcastDatas{PushType: "queue_update", Queue: queueData})
+				}
+
+			case "absent_ticket":
+				err := repository.AbsentUserTicket(env.DB, actionData.Number)
+				if err != nil {
+					log.Println("[ERROR] 整理券を不在キャンセルできませんでした。")
+				}
+				tickets, _ := repository.GetActiveTickets(env.DB)
+				if err == nil {
+					var queueData []interface{}
+					for _, t := range tickets {
+						queueData = append(queueData, t)
+					}
+					BroadcastQueue(BroadcastDatas{PushType: "queue_update", Queue: queueData})
+				}
+
+			case "group_enter":
+				// 入場処理ロジック...
+			case "group_exit":
+				// 退場処理ロジック...
+			case "clear_all":
+				// 全削除ロジック（もし拒否条件に引っかかったら、前作ったoperation_deniedのトーストをフロントに投げ返す）
+			}
+
+		} else {
+			// アクションが含まれていない場合は、従来通りの「設定データ」として処理
+			var newConfigData model.Config
+			err = json.Unmarshal(msg, &newConfigData)
+			if err != nil {
+				log.Printf("[ERROR] JSONの変換に失敗しました: %v", err)
+				continue
+			}
+			system.SaveConfig(newConfigData)
+			log.Println("[WS_CONFIG] 構成設定を更新しました")
 		}
-		system.SaveConfig(newConfigData)
-		
 	}
 }
 

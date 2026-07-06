@@ -37,3 +37,11 @@ func CancelUserTicket(db *sql.DB, bookingNumber int) error {
 	_, err := db.Exec(query, bookingNumber)
 	return err
 }
+
+// AbsentUserTicket はユーザーが自分のスマホから整理券をキャンセルした時にステータスを書き換える
+func AbsentUserTicket(db *sql.DB, bookingNumber int) error {
+	query := "UPDATE tickets SET status = 'absent' WHERE number = ? AND status = 'waiting'"
+	
+	_, err := db.Exec(query, bookingNumber)
+	return err
+}
