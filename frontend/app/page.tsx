@@ -31,6 +31,9 @@ export default function Home() {
 
   const [isBooked, setIsBooked] = useState<boolean>(false);
   
+  // ★【追加】連打・多重送信を防止するための通信中フラグ
+  const [isBookingInProgress, setIsBookingInProgress] = useState<boolean>(false);
+  
   // ポップアップとトーストの開閉状態
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [showToast, setShowToast] = useState<boolean>(false);
@@ -74,9 +77,12 @@ export default function Home() {
       if (!await getTicketExists(num, localTicketUUID)){
         localStorage.removeItem('booking_number');
         localStorage.removeItem('booking_uuid');
+        setBookingNumber(0);
+        setShowBookingData(false);
+        setIsBooked(false);
       }
     }
-    
+
     setCountdown(REFRESH_INTERVAL_SEC);
     try {
       const targetNumber = forcedNumber !== undefined ? forcedNumber : bookingNumberRef.current;
@@ -99,6 +105,8 @@ export default function Home() {
   const BookingButtonText = useMemo(() => {
     if (showIosModal) {
       return "ホーム画面に追加してください";
+    } else if (isBookingInProgress) {
+      return "発行しています..."; // ★ 通信中であることがわかるようにテキストを変更
     } else if (isBooked) {
       return "予約をキャンセルする";
     } else if (isBookingAvailable && isServiceAvailable) {
@@ -106,11 +114,17 @@ export default function Home() {
     } else {
       return "予約停止中";
     }
-  }, [isBooked, isBookingAvailable, isServiceAvailable, showIosModal]);
+  }, [isBooked, isBookingAvailable, isServiceAvailable, showIosModal, isBookingInProgress]);
   
   // 整理券発行
   const confirmBooking = async () => {
+    // ★【二重ガード】すでに発行処理中ならこれ以上何も処理をしない
+    if (isBookingInProgress) return;
+
     try {
+      // ★ 発行開始直前に処理中フラグをONにする（ロックをかける）
+      setIsBookingInProgress(true);
+
       const data = await bookTicket("");
       await handleRefresh(data.bookingNumber);
       setBookingNumber(data.bookingNumber);
@@ -122,6 +136,9 @@ export default function Home() {
       setIsModalOpen(false);
     } catch (error) {
       alert("整理券の発行に失敗しました。もう一度お試しください。");
+    } finally {
+      // ★ 成功・失敗に関わらず、すべての通信が終わったら必ずフラグをリセットしてロックを解放する
+      setIsBookingInProgress(false);
     }
 
     setIsNotificationDenied(false)
@@ -323,9 +340,10 @@ const confirmCancelBooking = async () => {
                       setIsCancelModalOpen(true)
                     }
                   }}
-                disabled={!isBookingAvailable || !isServiceAvailable || showIosModal}
+                // ★【修正】現在通信中（isBookingInProgress）の場合もボタンを無効化する
+                disabled={!isBookingAvailable || !isServiceAvailable || showIosModal || isBookingInProgress}
                 className={`btn btn-block rounded-xl h-12 text-sm font-bold tracking-wide transition-all ${
-                  showIosModal
+                  showIosModal || isBookingInProgress
                     ? 'bg-zinc-800/60 text-zinc-500 cursor-not-allowed opacity-40 border-zinc-700/10'
                     : isBooked
                       ? 'bg-red-950/40 text-red-400 border border-red-500/30 hover:bg-red-900/50 active:scale-[0.98]' 
