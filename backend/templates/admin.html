@@ -216,13 +216,18 @@
                             </button>
                         </div>
                         <div class="col-md-4">
-                            <button class="btn btn-outline-danger w-100 py-3 fs-5" onclick="controlQueue('clear_all')">
-                                <i class="bi bi-trash3-fill me-2"></i>待機列を全消去
+                            <button id="btn-manual-issue" class="btn btn-primary w-100 py-3 fs-5 fw-bold" onclick="openManualIssueModal()">
+                                <i class="bi bi-plus-circle-fill me-2"></i>窓口で手動発券
                             </button>
                         </div>
                         <div class="col-md-2">
                             <button class="btn btn-outline-light w-100 py-3 fs-5" onclick="controlQueue('refresh')">
                                 <i class="bi bi-arrow-clockwise me-2"></i>更新
+                            </button>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <button class="btn btn-sm btn-outline-danger w-100 py-2 border-opacity-20" onclick="controlQueue('clear_all')">
+                                <i class="bi bi-trash3-fill me-1"></i>待機列を全消去
                             </button>
                         </div>
                     </div>
@@ -322,10 +327,26 @@
                 <div class="modal-body p-4 text-center">
                     <i class="bi bi-person-x text-danger fs-1 mb-3 d-block"></i>
                     <h5 class="fw-bold mb-2 text-danger">不在削除の確認</h5>
-                    <p class="text-muted-custom small mb-4">整理券 <span id="modal-absent-number" class="text-danger fw-bold"></span> の呼び出し時に不在だったため、列から削除しますか？</p>
+                    <p class="text-muted-custom small mb-4">整理券 <span id="modal-absent-number" class="text-danger fw-bold"></span> の呼び出し時に不在だったため、列から削除しますか?</p>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-outline-light flex-grow-1 py-2" data-bs-dismiss="modal">戻る</button>
                         <button type="button" class="btn btn-danger flex-grow-1 py-2 fw-bold" id="btn-modal-absent-confirm">不在削除を実行</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="manualIssueConfirmModal" tabindex="-1" aria-labelledby="manualIssueConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-light border-primary border-opacity-30" style="background-color: #1a1b20 !important;">
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-plus-circle text-primary fs-1 mb-3 d-block"></i>
+                    <h5 class="fw-bold mb-2">手動発券の確認</h5>
+                    <p class="text-muted-custom small mb-4">窓口で新しい整理券を1枚、手動で新規発行しますか？<br>（スマホを持っていないお客様向けの機能です）</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-light flex-grow-1 py-2" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="button" class="btn btn-primary flex-grow-1 py-2 fw-bold" id="btn-modal-issue-confirm">発券を実行</button>
                     </div>
                 </div>
             </div>
@@ -343,7 +364,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // ★ グローバルで現在の入場中番号を記憶する変数
         let currentCallingNumber = null;
         let latestFullQueue = [];
 
@@ -407,7 +427,7 @@
         }
 
         function updateQueueTable(queue) {
-            latestFullQueue = queue || []; // 最新のキューをキャッシュ
+            latestFullQueue = queue || [];
             const tbody = document.getElementById('queue-tbody');
             const countBadge = document.getElementById('queue-count');
             const btnEnter = document.getElementById('btn-group-enter');
@@ -417,13 +437,11 @@
             countBadge.innerText = queueLength;
             tbody.innerHTML = '';
 
-            // キューが0組なら、現在誰も入場中でない場合のみ入場をdisabled化
             if (queueLength === 0) {
                 if (currentCallingNumber === null) {
                     btnEnter.disabled = true;
                 }
             } else {
-                // キューが1組以上ある場合、退場ボタンが押されていない（＝まだ誰も入場していない）ときだけ入場を許可
                 if (btnExit.disabled === true) {
                     btnEnter.disabled = false;
                 }
@@ -470,6 +488,17 @@
             document.getElementById('btn-modal-absent-confirm').onclick = function() {
                 absentModal.hide();
                 controlQueue('absent_ticket', ticketNumber);
+            };
+        }
+
+        // ★【追加】手動発券用のモーダル展開
+        function openManualIssueModal() {
+            const issueModal = new bootstrap.Modal(document.getElementById('manualIssueConfirmModal'));
+            issueModal.show();
+
+            document.getElementById('btn-modal-issue-confirm').onclick = function() {
+                issueModal.hide();
+                controlQueue('issue_manual_ticket');
             };
         }
 
@@ -576,7 +605,6 @@
             const activeDisplay = document.getElementById('active-group-display');
 
             if(action === 'group_enter') {
-                // ★ 現在待機している先頭の組を取得して案内中にセット
                 if (latestFullQueue && latestFullQueue.length > 0) {
                     currentCallingNumber = latestFullQueue[0].number;
                     activeDisplay.innerText = `#${currentCallingNumber} 入場中`;
@@ -584,18 +612,14 @@
                     currentCallingNumber = "???";
                     activeDisplay.innerText = `入場中`;
                 }
-
                 actionName = "次のグループを入場させました";
                 btnEnter.disabled = true;
                 btnExit.disabled = false;
             }
             if(action === 'group_exit') {
                 actionName = "現在のグループを退場させました";
-                
-                // ★ 案内中をリセット
                 currentCallingNumber = null;
                 activeDisplay.innerText = "案内中なし";
-
                 btnExit.disabled = true;
 
                 const currentQueueCount = parseInt(document.getElementById('queue-count').innerText) || 0;
@@ -614,6 +638,9 @@
             }
             if(action === 'cancel_ticket') actionName = `整理券 #${ticketNumber} をキャンセルしました`;
             if(action === 'absent_ticket') actionName = `整理券 #${ticketNumber} を不在のため削除しました`;
+            
+            // ★ 手動発券アクション用の通知名セット
+            if(action === 'issue_manual_ticket') actionName = "整理券を手動で新規発行しました";
             
             if (ws && ws.readyState === WebSocket.OPEN) {
                 const payload = {
