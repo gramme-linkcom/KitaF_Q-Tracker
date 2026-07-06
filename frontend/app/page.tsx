@@ -66,6 +66,17 @@ export default function Home() {
 
   const handleRefresh = async (forcedNumber?: number) => {
     updateTime();
+    
+    const localNumber = localStorage.getItem('booking_number');
+    const localTicketUUID = localStorage.getItem('booking_uuid');
+    if (localNumber != null && localTicketUUID != null) {
+      const num = Number(localNumber);
+      if (!await getTicketExists(num, localTicketUUID)){
+        localStorage.removeItem('booking_number');
+        localStorage.removeItem('booking_uuid');
+      }
+    }
+    
     setCountdown(REFRESH_INTERVAL_SEC);
     try {
       const targetNumber = forcedNumber !== undefined ? forcedNumber : bookingNumberRef.current;
