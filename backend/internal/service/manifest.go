@@ -21,8 +21,8 @@ func ManifestHandler(w http.ResponseWriter, r *http.Request) {
 	manifest := map[string]interface{}{
 		"name":             "デジタル整理券システム",
 		"short_name":       "Q-Tracker",
-		"description":      "学校祭アトラクション順番待ちアプリ",
-		"start_url":        startURL, // 🚀 ここが動的にngrokのURLになります！
+		"description":      "整理券アプリ",
+		"start_url":        startURL,
 		"display":          "standalone",
 		"background_color": "#141416",
 		"theme_color":      "#1e1e22",
