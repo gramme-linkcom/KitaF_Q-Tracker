@@ -5,8 +5,8 @@ services:
       dockerfile: backend/Dockerfile
     ports:
       - "8080:8080"
-    volumes:
-      - "./data:/app/data"
+    # volumes:
+    #   - "./data:/app/data"
     environment:
       - PUSH_PRIVATE_KEY=
       - PUSH_PUBLIC_KEY=
