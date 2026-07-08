@@ -1,14 +1,15 @@
 import React from "react";
 import { useState } from "react";
 
-// 💡 親（page.tsx）から受け取るデータの「型」を定義します
+// 💡 親（page.tsx）から受け取るデータの「型」を拡張します
 interface BookingModalProps {
   isOpen: boolean;        // 開いているかどうか
   onClose: () => void;     // 閉じるボタンが押された時の関数
   onConfirm: () => void;   // 確定ボタンが押された時の関数
+  isPending: boolean;
 }
 
-export default function BookingModal({ isOpen, onClose, onConfirm }: BookingModalProps) {
+export default function BookingModal({ isOpen, onClose, onConfirm, isPending }: BookingModalProps) {
   const [step, setStep] = useState("input");
 
   return (
@@ -19,7 +20,6 @@ export default function BookingModal({ isOpen, onClose, onConfirm }: BookingModa
           デジタル整理券の発行
         </h3>
         
-        {/* 💡 劇的に見やすくなった注意事項セクション */}
         <div className="bg-[#1e1e22]/60 rounded-xl border border-zinc-800/40 p-4 mb-6">
           <span className="block text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase mb-3 text-center">
             INFORMATION / 注意事項
@@ -52,28 +52,34 @@ export default function BookingModal({ isOpen, onClose, onConfirm }: BookingModa
         </p>
         
         <div className="flex gap-2">
-          {/* キャンセルボタン */}
+          {/* キャンセルボタン：通信中は押せないように制御 */}
           <button 
             type="button"
             onClick={onClose}
-            className="btn btn-ghost rounded-xl flex-1 text-xs font-bold text-zinc-400 hover:bg-zinc-700/30 hover:text-zinc-200"
+            disabled={isPending}
+            className="btn btn-ghost rounded-xl flex-1 text-xs font-bold text-zinc-400 hover:bg-zinc-700/30 hover:text-zinc-200 disabled:opacity-40 select-none"
           >
             キャンセル
           </button>
-          {/* 確定ボタン */}
+          
           <button 
             type="button"
             onClick={onConfirm}
-            className="btn bg-zinc-100 text-zinc-900 hover:bg-zinc-200 border-none rounded-xl flex-1 text-xs font-bold tracking-wider"
+            disabled={isPending}
+            className={`btn rounded-xl flex-1 text-xs font-bold tracking-wider border-none select-none ${
+              isPending 
+                ? 'bg-zinc-700 text-zinc-500 cursor-not-allowed opacity-50' 
+                : 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200'
+            }`}
           >
-            確定する
+            {isPending ? "発行中..." : "確定する"}
           </button>
         </div>
       </div>
       
-      {/* ポップアップ外の暗い背景部分 */}
+      {/* ポップアップ外の暗い背景部分：通信中はタップしても閉じないようにガード */}
       <div 
-        onClick={onClose} 
+        onClick={() => { if (!isPending) onClose(); }} 
         className="modal-backdrop bg-[#0f0f11]/70 backdrop-blur-xs cursor-pointer"
       ></div>
     </div>

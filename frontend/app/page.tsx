@@ -394,9 +394,10 @@ const confirmCancelBooking = async () => {
         </div>
 
         <BookingModal 
-          isOpen={isModalOpen}                      
-          onClose={() => setIsModalOpen(false)}     
-          onConfirm={confirmBooking}                
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onConfirm={confirmBooking}
+          isPending={isBookingInProgress}
         />
         <BookingCancelModal
           isOpen={isCancelModalOpen}
