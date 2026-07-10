@@ -166,6 +166,7 @@ export default function Home() {
       setIsModalOpen(false);
     } catch (error: any) {
       alert(error.message || "整理券の発行に失敗しました。もう一度お試しください。");
+      await handleRefresh();
     } finally {
       setIsBookingInProgress(false);
     }

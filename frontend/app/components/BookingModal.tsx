@@ -73,6 +73,51 @@ export default function BookingModal({ isOpen, onClose, onConfirm, isPending, se
     return false;
   };
 
+  const isAllSlotsPast = React.useMemo(() => {
+    if (!serveEndTime) return false;
+    try {
+      const [endH, endM] = serveEndTime.split(":").map(Number);
+      const now = new Date();
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+      
+      if (currentHours > endH || (currentHours === endH && currentMinutes >= endM)) {
+        return true;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return false;
+  }, [serveEndTime]);
+
+  const isConfirmDisabled = React.useMemo(() => {
+    if (isPending) return true;
+    if (reservedTime === "") {
+      return isAllSlotsPast;
+    }
+    const past = isSlotPast(reservedTime);
+    const bookedCount = slotBookings[reservedTime] || 0;
+    const remaining = maxBookingsPerSlot - bookedCount;
+    const isFull = remaining <= 0;
+    return past || isFull;
+  }, [reservedTime, isPending, isAllSlotsPast, slotBookings, maxBookingsPerSlot]);
+
+  const confirmButtonText = React.useMemo(() => {
+    if (isPending) return "発行中...";
+    if (reservedTime === "") {
+      return isAllSlotsPast ? "受付終了" : "確定する";
+    }
+    if (isSlotPast(reservedTime)) {
+      return "受付終了";
+    }
+    const bookedCount = slotBookings[reservedTime] || 0;
+    const remaining = maxBookingsPerSlot - bookedCount;
+    if (remaining <= 0) {
+      return "満員";
+    }
+    return "確定する";
+  }, [isPending, reservedTime, isAllSlotsPast, slotBookings, maxBookingsPerSlot]);
+
   return (
     <div className={`modal modal-bottom sm:modal-middle transition-all duration-300 ${isOpen ? 'modal-open pointer-events-auto' : 'pointer-events-none'}`}>
       <div className="modal-box rounded-2xl border border-zinc-700/30 p-8 shadow-2xl bg-[#242428] max-w-sm mx-auto text-zinc-200">
@@ -118,7 +163,9 @@ export default function BookingModal({ isOpen, onClose, onConfirm, isPending, se
             disabled={isPending}
             className="w-full bg-[#1e1e22] text-zinc-100 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-hidden focus:ring-1 focus:ring-cyan-400 transition-all select-none"
           >
-            <option value="">時間指定なし（順番待ち）</option>
+            <option value="" disabled={isAllSlotsPast}>
+              時間指定なし（順番待ち）{isAllSlotsPast ? " (受付終了)" : ""}
+            </option>
             {slots.map((slot) => {
               const past = isSlotPast(slot);
               const bookedCount = slotBookings[slot] || 0;
@@ -164,14 +211,14 @@ export default function BookingModal({ isOpen, onClose, onConfirm, isPending, se
           <button 
             type="button"
             onClick={() => onConfirm(reservedTime)}
-            disabled={isPending}
+            disabled={isConfirmDisabled}
             className={`btn rounded-xl flex-1 text-xs font-bold tracking-wider border-none select-none ${
-              isPending 
-                ? 'bg-zinc-700 text-zinc-500 cursor-not-allowed opacity-50' 
+              isConfirmDisabled 
+                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-50' 
                 : 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200'
             }`}
           >
-            {isPending ? "発行中..." : "確定する"}
+            {confirmButtonText}
           </button>
         </div>
       </div>
