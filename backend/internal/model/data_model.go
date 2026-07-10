@@ -13,6 +13,7 @@ type UserQueueResponse struct {
 	IsActive           bool   `json:"isActive"`
 	NoticeMessage      string `json:"noticeMessage"` // 自動計算の混雑目安
 	InfoMessage        string `json:"infoMessage"`   // configから読み込んだ運営の手動メッセージ
+	ReservedTime       string `json:"reservedTime"`  // 指定された予約時間
 }
 
 // 管理者コンソール（WebSocket）用のフルデータレスポンス
@@ -32,6 +33,7 @@ type Ticket struct {
 	Uuid		string `json:"uuid"`
 	DeviceID	string `json:"device_id"`
 	Status 		string `json:"status"` // "waiting", "called", "canceled", "absent"
+	ReservedTime string `json:"reserved_time"` // 指定された予約時間
 }
 
 type ResultTicket struct {

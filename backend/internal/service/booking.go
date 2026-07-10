@@ -30,7 +30,17 @@ func (env *APIEnv) BookTicketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bookingData, err := repository.CreateUserTicket(env.DB, req.PushToken)
+	// 指定された時間枠の予約上限チェック（例: 各枠5グループまで。時間指定なしの場合は制限なし）
+	if req.ReservedTime != "" {
+		var count int
+		err := env.DB.QueryRow("SELECT COUNT(*) FROM tickets WHERE reserved_time = ? AND status IN ('waiting', 'serving')", req.ReservedTime).Scan(&count)
+		if err == nil && count >= 5 {
+			http.Error(w, `{"error": "指定された時間帯は予約上限に達しています"}`, http.StatusBadRequest)
+			return
+		}
+	}
+
+	bookingData, err := repository.CreateUserTicket(env.DB, req.PushToken, req.ReservedTime)
 	if err != nil {
 		log.Printf("[ERROR] 整理券の発行失敗: %v", err)
 		http.Error(w, `{"error": "Server error"}`, http.StatusInternalServerError)

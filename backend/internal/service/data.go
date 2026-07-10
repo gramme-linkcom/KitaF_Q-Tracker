@@ -108,6 +108,11 @@ func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. レスポンスデータを組み立てて送出
+	reservedTime := ""
+	if myNumberStr != "" && myNumberStr != "0" {
+		_ = env.DB.QueryRow("SELECT COALESCE(reserved_time, '') FROM tickets WHERE number = ?", myNumberStr).Scan(&reservedTime)
+	}
+
 	response := model.UserQueueResponse{
 		WaitTime:      waitTime,
 		TimeRequired : config.TimeRequired,
@@ -120,6 +125,7 @@ func (env *APIEnv) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
 		IsActive:      room.IsActive,
 		NoticeMessage: noticeMessage,
 		InfoMessage:   config.Infomation,
+		ReservedTime:  reservedTime,
 	}
 
 	json.NewEncoder(w).Encode(response)

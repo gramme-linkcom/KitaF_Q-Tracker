@@ -28,6 +28,7 @@ export default function Home() {
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [remainGroups, setRemainGroups] = useState<number>(0)
   const [timeRequired, setTimeRequired] = useState<number>(0);
+  const [reservedTime, setReservedTime] = useState<string>("");
 
   const [isBooked, setIsBooked] = useState<boolean>(false);
   
@@ -67,6 +68,7 @@ export default function Home() {
         localStorage.removeItem('booking_number');
         localStorage.removeItem('booking_uuid');
         setBookingNumber(0);
+        setReservedTime("");
         setShowBookingData(false);
         setIsBooked(false);
       }
@@ -86,6 +88,9 @@ export default function Home() {
       setIsServiceAvailable(data.isServiceAvailable);
       if (data.infoMessage !== undefined) setInfoMessage(data.infoMessage);
       setRemainGroups(data.myAheadGroups ?? 0);
+      if (data.reservedTime !== undefined) {
+        setReservedTime(data.reservedTime);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -106,7 +111,7 @@ export default function Home() {
   }, [isBooked, isBookingAvailable, isServiceAvailable, showIosModal, isBookingInProgress]);
   
   // 整理券発行
-  const confirmBooking = async () => {
+  const confirmBooking = async (reservedTime: string) => {
     if (isBookingInProgress) return;
 
     try {
@@ -129,7 +134,7 @@ export default function Home() {
       }
 
       // 3. 生成した端末ID（または空文字）を乗せてサーバーへ一撃ポスト！
-      const data = await bookTicket(pushToken);
+      const data = await bookTicket(pushToken, reservedTime);
       
       await handleRefresh(data.bookingNumber);
       setBookingNumber(data.bookingNumber);
@@ -139,8 +144,8 @@ export default function Home() {
       setIsBooked(true);
       setShowToast(true);
       setIsModalOpen(false);
-    } catch (error) {
-      alert("整理券の発行に失敗しました。もう一度お試しください。");
+    } catch (error: any) {
+      alert(error.message || "整理券の発行に失敗しました。もう一度お試しください。");
     } finally {
       setIsBookingInProgress(false);
     }
@@ -158,6 +163,7 @@ const confirmCancelBooking = async () => {
     localStorage.removeItem('booking_number');
     localStorage.removeItem('booking_uuid');
     setIsBooked(false);
+    setReservedTime("");
     setIsCancelModalOpen(false);
     setShowBookingData(false);
     handleRefresh();
@@ -287,6 +293,7 @@ const confirmCancelBooking = async () => {
             timeRequired={timeRequired}
             remainGroups={remainGroups}
             show={showBookingData}
+            reservedTime={reservedTime}
           />
           
           <div className="w-full bg-[#1e1e22] rounded-2xl border border-zinc-700/20 p-8 md:p-12 flex flex-col items-center shadow-2xl">

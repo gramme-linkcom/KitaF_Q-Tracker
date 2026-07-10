@@ -1,7 +1,8 @@
 package model
 
 type BookingRequest struct {
-	PushToken string `json:"pushToken"` // スマホのPush通知用識別子（通知拒否や非対応なら空文字 ""）
+	PushToken    string `json:"pushToken"`    // スマホのPush通知用識別子（通知拒否や非対応なら空文字 ""）
+	ReservedTime string `json:"reservedTime"` // 指定された予約時間（例: "10:00 - 10:30"）
 }
 
 // 予約成功時にフロントへ返すJSONの形

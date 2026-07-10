@@ -11,6 +11,7 @@ export interface QueueStatus {
   isServiceAvailable: boolean;
   noticeMessage: string;
   infoMessage?: string;
+  reservedTime?: string; // 指定された予約時間
 }
 
 export async function getPublicVapidKey() {
@@ -43,14 +44,17 @@ export async function fetchQueueStatus(bookingNumber: number): Promise<QueueStat
   return response.json();
 }
 
-// 整理券を発行する (POST)
-export async function bookTicket(pushToken: string = ""): Promise<{ bookingNumber: number; uuid: string; success: boolean }> {
+export async function bookTicket(pushToken: string = "", reservedTime: string = ""): Promise<{ bookingNumber: number; uuid: string; success: boolean }> {
   const response = await fetch("/api/booking", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pushToken }),
+    body: JSON.stringify({ pushToken, reservedTime }),
   });
-  if (!response.ok) throw new Error("予約に失敗しました");
+  if (!response.ok) {
+    // もし上限エラーなどでステータスコード400が返ってきた場合、詳細なエラーメッセージを読み取る
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || "予約に失敗しました");
+  }
   return response.json();
 }
 

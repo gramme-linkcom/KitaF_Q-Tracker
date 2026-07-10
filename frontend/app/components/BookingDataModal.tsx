@@ -5,9 +5,10 @@ interface BookingDataModalProps {
   remainGroups   : number;
   timeRequired   : number;
   bookingNumber  : number; // 整理券番号
+  reservedTime?  : string; // 指定された予約時間
 }
 
-export default function BookingDataModal({ show, currentNumber, nextNumber, remainGroups, timeRequired, bookingNumber }: BookingDataModalProps) {
+export default function BookingDataModal({ show, currentNumber, nextNumber, remainGroups, timeRequired, bookingNumber, reservedTime }: BookingDataModalProps) {
   if (show == true){
     const now = new Date();
     now.setMinutes(now.getMinutes() + remainGroups * timeRequired);
@@ -59,14 +60,25 @@ export default function BookingDataModal({ show, currentNumber, nextNumber, rema
           </div>
         )}
 
-        <div className="text-center bg-linear-to-b from-[#161619]/80 to-[#0e0e10]/95 border border-zinc-800/40 rounded-xl py-5 px-4 w-full shadow-inner">
-          <span className="block text-[10px] font-bold tracking-[0.15em] text-zinc-400/80 uppercase mb-2">
-            ご案内予定時刻
-          </span>
-          <div className="text-2xl font-light font-mono text-zinc-200 tracking-wide">
-            {ScheduledTime} <span className="text-xs font-medium text-zinc-500 ml-0.5">頃</span>
+        {reservedTime ? (
+          <div className="text-center bg-[#161619]/80 border border-zinc-800/40 rounded-xl py-5 px-4 w-full shadow-inner">
+            <span className="block text-[10px] font-bold tracking-[0.15em] text-zinc-400/80 uppercase mb-2">
+              ご案内予定時間枠
+            </span>
+            <div className="text-2xl font-light font-mono text-cyan-300 tracking-wide">
+              {reservedTime}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-center bg-linear-to-b from-[#161619]/80 to-[#0e0e10]/95 border border-zinc-800/40 rounded-xl py-5 px-4 w-full shadow-inner">
+            <span className="block text-[10px] font-bold tracking-[0.15em] text-zinc-400/80 uppercase mb-2">
+              ご案内予定時刻
+            </span>
+            <div className="text-2xl font-light font-mono text-zinc-200 tracking-wide">
+              {ScheduledTime} <span className="text-xs font-medium text-zinc-500 ml-0.5">頃</span>
+            </div>
+          </div>
+        )}
 
       </div>
    );

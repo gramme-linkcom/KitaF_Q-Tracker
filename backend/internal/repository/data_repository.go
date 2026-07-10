@@ -30,10 +30,9 @@ func SetRoomStatus(db *sql.DB, roomStatus RoomStatus) error {
 }
 
 func GetYoungerGroups(db *sql.DB) (*model.Ticket, error) {
-	query := "SELECT number, device_id, status FROM tickets WHERE status = 'waiting' ORDER BY number ASC LIMIT 1;"
+	query := "SELECT number, uuid, device_id, status, COALESCE(reserved_time, '') FROM tickets WHERE status = 'waiting' ORDER BY reserved_time ASC, number ASC LIMIT 1;"
 	var t model.Ticket
-	// 1件だけの取得なので QueryRow を使い、Scan で構造体に流し込む
-	err := db.QueryRow(query).Scan(&t.Number, &t.DeviceID, &t.Status)
+	err := db.QueryRow(query).Scan(&t.Number, &t.Uuid, &t.DeviceID, &t.Status, &t.ReservedTime)
 	
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -47,8 +46,14 @@ func GetYoungerGroups(db *sql.DB) (*model.Ticket, error) {
 
 func GetAheadGroups(db *sql.DB, myNumberStr string) (int) {
 	myAheadGroups := 0
-	query := "SELECT COUNT(*) FROM tickets WHERE number < ? AND status = 'waiting'"
-	err := db.QueryRow(query, myNumberStr).Scan(&myAheadGroups)
+	query := `
+		SELECT COUNT(*) FROM tickets 
+		WHERE status = 'waiting' 
+		  AND (
+			reserved_time < (SELECT reserved_time FROM tickets WHERE number = ?)
+			OR (reserved_time = (SELECT reserved_time FROM tickets WHERE number = ?) AND number < ?)
+		  )`
+	err := db.QueryRow(query, myNumberStr, myNumberStr, myNumberStr).Scan(&myAheadGroups)
 	if err != nil {
 		// エラー時は安全に0にしておく
 		return 0
@@ -56,9 +61,9 @@ func GetAheadGroups(db *sql.DB, myNumberStr string) (int) {
 	return myAheadGroups 
 }
 
-// GetActiveTickets は待機中("waiting")のチケットの一覧を番号順にそのまま取得する
+// GetWaitingTickets は待機中("waiting")のチケットの一覧を取得する
 func GetWaitingTickets(db *sql.DB) ([]model.Ticket, error) {
-	rows, err := db.Query("SELECT number, device_id, status FROM tickets WHERE status = 'waiting' ORDER BY number ASC")
+	rows, err := db.Query("SELECT number, uuid, device_id, status, COALESCE(reserved_time, '') FROM tickets WHERE status = 'waiting' ORDER BY reserved_time ASC, number ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +72,7 @@ func GetWaitingTickets(db *sql.DB) ([]model.Ticket, error) {
 	var tickets []model.Ticket
 	for rows.Next() {
 		var t model.Ticket
-		if err := rows.Scan(&t.Number, &t.DeviceID, &t.Status); err != nil {
+		if err := rows.Scan(&t.Number, &t.Uuid, &t.DeviceID, &t.Status, &t.ReservedTime); err != nil {
 			return nil, err
 		}
 		tickets = append(tickets, t)
@@ -79,9 +84,9 @@ func GetWaitingTickets(db *sql.DB) ([]model.Ticket, error) {
 	return tickets, nil
 }
 
-// GetActiveTickets は待機中("waiting")のチケットの一覧を番号順にそのまま取得する
+// GetActiveTickets は待機中("waiting")または案内中("serving")のチケットの一覧を取得する
 func GetActiveTickets(db *sql.DB) ([]model.Ticket, error) {
-	rows, err := db.Query("SELECT number, device_id, status FROM tickets WHERE status = 'waiting' OR status = 'serving' ORDER BY number ASC")
+	rows, err := db.Query("SELECT number, uuid, device_id, status, COALESCE(reserved_time, '') FROM tickets WHERE status = 'waiting' OR status = 'serving' ORDER BY reserved_time ASC, number ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +95,7 @@ func GetActiveTickets(db *sql.DB) ([]model.Ticket, error) {
 	var tickets []model.Ticket
 	for rows.Next() {
 		var t model.Ticket
-		if err := rows.Scan(&t.Number, &t.DeviceID, &t.Status); err != nil {
+		if err := rows.Scan(&t.Number, &t.Uuid, &t.DeviceID, &t.Status, &t.ReservedTime); err != nil {
 			return nil, err
 		}
 		tickets = append(tickets, t)

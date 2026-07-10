@@ -7,15 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func CreateUserTicket(db *sql.DB, pushToken string) (model.ResultTicket, error) {
+func CreateUserTicket(db *sql.DB, pushToken string, reservedTime string) (model.ResultTicket, error) {
 	resultData := model.ResultTicket{
 		Uuid: uuid.NewString(),
 		TicketNumber: 0,
 	}
 
-	query := "INSERT INTO tickets (status, uuid, device_id) VALUES ('waiting', ?, ?)"
+	query := "INSERT INTO tickets (status, uuid, device_id, reserved_time) VALUES ('waiting', ?, ?, ?)"
 	
-	result, err := db.Exec(query, resultData.Uuid, pushToken)
+	result, err := db.Exec(query, resultData.Uuid, pushToken, reservedTime)
 	if err != nil {
 		return resultData, err
 	}

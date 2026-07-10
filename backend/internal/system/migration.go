@@ -13,11 +13,15 @@ func migrate(db *sql.DB) error {
 		uuid TEXT NOT NULL,
 		device_id TEXT,
 		status TEXT NOT NULL DEFAULT 'waiting',
+		reserved_time TEXT DEFAULT '',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
 	if _, err := db.Exec(ticketsTable); err != nil {
 		return fmt.Errorf("failed to create tickets table: %w", err)
 	}
+
+	// 既存データベースへの対応用カラム追加（すでにある場合は無視される）
+	_, _ = db.Exec("ALTER TABLE tickets ADD COLUMN reserved_time TEXT DEFAULT '';")
 
 	// 2. ルーム状況管理テーブルの作成
 	roomStatusTable := `
